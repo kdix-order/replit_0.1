@@ -392,6 +392,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // 特定の注文を呼び出し番号で取得するAPI
+  app.get("/api/orders/:callNumber", isAuthenticated, async (req, res) => {
+    try {
+      const { callNumber } = req.params;
+      const callNumberInt = parseInt(callNumber, 10);
+      
+      if (isNaN(callNumberInt)) {
+        return res.status(400).json({ message: "Invalid call number" });
+      }
+      
+      // 全注文を取得して呼び出し番号でフィルタリング
+      const userOrders = await storage.getOrdersByUser(req.user.id);
+      const order = userOrders.find(o => o.callNumber === callNumberInt);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // 注文に対応するタイムスロット情報を取得
+      const timeSlot = await storage.getTimeSlot(order.timeSlotId);
+      
+      // レスポンスとしてタイムスロット情報も含める
+      res.json({ ...order, timeSlot });
+    } catch (error) {
+      console.error("Order fetch error:", error);
+      res.status(500).json({ 
+        message: "注文情報の取得中にエラーが発生しました",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   // (最初のフィードバックルートセクションは削除)
 
   // Admin routes

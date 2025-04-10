@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,7 @@ import { OrderStatusTracker } from "./order-status-tracker";
 import { Separator } from "@/components/ui/separator";
 import { getCustomizationLabel } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { ClipboardCheck, ChefHat, AlertCircle } from "lucide-react";
+import { ClipboardCheck, ChefHat, AlertCircle, Ticket } from "lucide-react";
 
 type OrderItem = {
   id: number;
@@ -45,6 +46,7 @@ type OrderDetailDialogProps = {
 
 export function OrderDetailDialog({ isOpen, onClose, order }: OrderDetailDialogProps) {
   const [showConfetti, setShowConfetti] = useState(false);
+  const [, setLocation] = useLocation();
 
   // 注文ステータスが「完了」に変わった時にコンフェティアニメーションを表示
   useEffect(() => {
@@ -157,9 +159,23 @@ export function OrderDetailDialog({ isOpen, onClose, order }: OrderDetailDialogP
             </div>
           </div>
 
-          <div className="mt-6 flex justify-between items-center">
-            <p className="text-sm text-gray-600">受取時間：{order.timeSlot.time}</p>
-            <Button variant="outline" onClick={onClose}>閉じる</Button>
+          {/* 受け取りQRコードと閉じるボタン */}
+          <div className="mt-6 flex flex-col gap-3">
+            <Button 
+              className="w-full bg-[#e80113] hover:bg-[#d10010] text-white"
+              onClick={() => {
+                onClose();
+                setLocation(`/pickup/${order.callNumber}`);
+              }}
+            >
+              <Ticket className="h-4 w-4 mr-2" />
+              受け取り用QRコードを表示
+            </Button>
+            
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-gray-600">受取時間：{order.timeSlot.time}</p>
+              <Button variant="outline" onClick={onClose}>閉じる</Button>
+            </div>
           </div>
         </div>
 

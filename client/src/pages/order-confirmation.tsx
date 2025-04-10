@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, ClockIcon, ArrowRight, Home, History } from "lucide-react";
+import { CheckCircle, ClockIcon, ArrowRight, Home, History, Ticket } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -87,6 +87,15 @@ export default function OrderConfirmation() {
               <p className="text-gray-500 text-sm">約15分後（{formattedPickupTime}頃）</p>
             </div>
           </div>
+          
+          {/* 受け取り用QRコード表示リンク */}
+          <Button
+            className="w-full mt-3 bg-[#e80113] hover:bg-[#d10010] text-white"
+            onClick={() => setLocation(`/pickup/${callNumber}`)}
+          >
+            <Ticket className="mr-2 h-4 w-4" />
+            受け取り用QRコードを表示する
+          </Button>
 
           <Separator className="my-4" />
 

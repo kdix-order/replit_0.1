@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { AnimatedButton } from "@/components/ui/animated-button";
-import { Clock, ChevronRight, Receipt, MessageSquare, Eye } from "lucide-react";
+import { Clock, ChevronRight, Receipt, MessageSquare, Eye, Ticket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { FeedbackDialog } from "@/components/feedback-dialog";
@@ -184,6 +184,21 @@ export default function OrderHistory() {
                         <MessageSquare className="h-4 w-4 mr-1" />
                         <span className="text-xs">評価</span>
                       </AnimatedButton>
+                      
+                      <AnimatedButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLocation(`/pickup/${order.callNumber}`);
+                        }}
+                        className="mr-2 px-2 py-1 bg-[#e80113] hover:bg-red-600 text-white rounded-md"
+                        animationType="scale"
+                        size="sm"
+                        intensity="medium"
+                      >
+                        <Ticket className="h-4 w-4 mr-1" />
+                        <span className="text-xs">QR</span>
+                      </AnimatedButton>
+                      
                       <ChevronRight className="h-5 w-5 text-gray-400" />
                     </div>
                   </div>

@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Menu from "@/pages/menu";
 import Cart from "@/pages/cart";
 import OrderConfirmation from "@/pages/order-confirmation";
+import OrderPickup from "@/pages/order-pickup";
 import OrderHistory from "@/pages/order-history";
 import Admin from "@/pages/admin";
 import { Header } from "@/components/layout/header";
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/" component={Menu} />
       <Route path="/cart" component={Cart} />
       <Route path="/confirmation/:callNumber" component={OrderConfirmation} />
+      <Route path="/pickup/:callNumber" component={OrderPickup} />
       <Route path="/history" component={OrderHistory} />
       <Route path="/admin" component={Admin} />
       <Route component={NotFound} />

@@ -79,7 +79,9 @@ export default function Cart() {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       setIsCheckoutOpen(false);
       setPaymentProcessing(false);
-      setLocation(`/confirmation/${data.callNumber}`);
+      
+      // 注文確認ページではなく、受け取りページに遷移
+      setLocation(`/pickup/${data.callNumber}`);
     },
     onError: (error: any) => {
       console.error("Mutation error:", error);
