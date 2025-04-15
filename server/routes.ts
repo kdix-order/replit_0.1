@@ -22,10 +22,10 @@ declare global {
 }
 
 // JWT Secret (should be in env variables in production)
-const JWT_SECRET = process.env.JWT_SECRET || "campus-order-jwt-secret";
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "your-google-client-id";
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "your-google-client-secret";
-const ALLOWED_DOMAIN = process.env.ALLOWED_DOMAIN || "xxx.ac.jp";
+const JWT_SECRET = () => process.env.JWT_SECRET || "campus-order-jwt-secret";
+const GOOGLE_CLIENT_ID = () => process.env.GOOGLE_CLIENT_ID || "your-google-client-id";
+const GOOGLE_CLIENT_SECRET = () => process.env.GOOGLE_CLIENT_SECRET || "your-google-client-secret";
+const ALLOWED_DOMAIN = () => process.env.ALLOWED_DOMAIN || "xxx.ac.jp";
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req: Request, res: Response, next: Function) => {
@@ -40,7 +40,7 @@ const isAuthenticated = (req: Request, res: Response, next: Function) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+    const decoded = jwt.verify(token, JWT_SECRET()) as { userId: number };
     req.user = { id: decoded.userId };
     next();
   } catch (error) {
@@ -84,15 +84,15 @@ const configurePassport = (app: Express) => {
   passport.use(
     new GoogleStrategy(
       {
-        clientID: GOOGLE_CLIENT_ID,
-        clientSecret: GOOGLE_CLIENT_SECRET,
+        clientID: GOOGLE_CLIENT_ID(),
+        clientSecret: GOOGLE_CLIENT_SECRET(),
         callbackURL: "/api/auth/google/callback",
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
           // Check if email domain is allowed
           const email = profile.emails?.[0]?.value || "";
-          if (!email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+          if (!email.endsWith(`@${ALLOWED_DOMAIN()}`)) {
             return done(null, false, { message: "Only university emails are allowed" });
           }
 
@@ -121,7 +121,7 @@ const configurePassport = (app: Express) => {
   const MemoryStore = memoryStore(session);
   app.use(
     session({
-      secret: JWT_SECRET,
+      secret: JWT_SECRET(),
       resave: false,
       saveUninitialized: false,
       store: new MemoryStore({
@@ -136,7 +136,7 @@ const configurePassport = (app: Express) => {
 
 // Helper function to create a JWT token
 const generateToken = (userId: number): string => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "24h" });
+  return jwt.sign({ userId }, JWT_SECRET(), { expiresIn: "24h" });
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
