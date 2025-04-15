@@ -1,3 +1,8 @@
+/**
+ * 注文履歴ページ
+ * ユーザーの過去の注文を一覧表示し、各注文の詳細や状態を確認できる機能を提供します
+ * 注文のステータス表示、フィードバック送信、QRコード表示への遷移機能も含まれています
+ */
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
@@ -40,6 +45,11 @@ const statusLabels = {
   completed: { text: "完了", className: "bg-green-100 text-green-800" }
 };
 
+/**
+ * 注文履歴ページコンポーネント
+ * ユーザーの注文履歴を一覧表示し、各注文の詳細確認や評価機能を提供します
+ * 注文ステータスのカラーコーディングやQRコードへの遷移機能も実装しています
+ */
 export default function OrderHistory() {
   const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
@@ -196,7 +206,7 @@ export default function OrderHistory() {
                         intensity="medium"
                       >
                         <Ticket className="h-4 w-4 mr-1" />
-                        <span className="text-xs">QR</span>
+                        <span className="text-xs">番号</span>
                       </AnimatedButton>
                       
                       <ChevronRight className="h-5 w-5 text-gray-400" />

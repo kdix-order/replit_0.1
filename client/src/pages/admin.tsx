@@ -1,3 +1,7 @@
+/**
+ * 管理者ページ
+ * 注文の管理、ステータスの更新、および店舗設定を制御する管理画面を提供します
+ */
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
@@ -9,7 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getCustomizationLabel } from "@/lib/utils";
 import { BowlSteamSpinner } from "@/components/ui/food-spinner";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter, Clock, AlertCircle, PauseCircle, PlayCircle } from "lucide-react";
+import { RefreshCw, Filter, Clock, AlertCircle, PauseCircle, PlayCircle, MessageSquare, ThumbsUp, ThumbsDown, User, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,6 +21,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect, useMemo } from "react";
 import { useStoreSettings, useUpdateStoreSettings } from "@/hooks/use-store-settings";
+import { useFeedback } from "@/hooks/use-feedback";
 import { Switch } from "@/components/ui/switch";
 import { OrderStatusTracker } from "@/components/order-status-tracker";
 
@@ -49,6 +54,292 @@ const statusLabels = {
   completed: { text: "完了", className: "bg-green-100 text-green-800", icon: null }
 };
 
+/**
+ * 注文アイテムコンポーネント
+ * 各注文の表示と詳細の展開/折りたたみ機能を提供します
+ */
+function OrderItem({ 
+  order, 
+  handleStatusChange, 
+  updateOrderStatusMutation, 
+  setDetailOrder, 
+  statusLabels,
+  getCustomizationLabel
+}: { 
+  order: Order; 
+  handleStatusChange: (orderId: number, status: string) => void;
+  updateOrderStatusMutation: any;
+  setDetailOrder: (order: Order | null) => void;
+  statusLabels: any;
+  getCustomizationLabel: (customization: string) => string;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  return (
+    <div 
+      className={`hover:bg-gray-50 transition-colors ${order.status === 'new' ? 'bg-yellow-50' : order.status === 'preparing' ? 'bg-blue-50' : ''}`}
+    >
+      {/* 注文概要セクション（常に表示） */}
+      <div 
+        className="p-4 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center justify-between">
+          {/* 左側: 呼出番号 */}
+          <div className="flex-shrink-0 w-1/3 md:w-1/5">
+            <div className="bg-[#fff9dc] px-3 py-2 rounded-lg border border-[#e80113] shadow-sm flex flex-col items-center justify-center">
+              <div className="text-xs text-gray-600">呼出番号</div>
+              <div className="font-bold text-3xl text-[#e80113]">{order.callNumber}</div>
+            </div>
+          </div>
+          
+          {/* 中央: 注文内容の概要 */}
+          <div className="flex-grow px-3">
+            <div className="flex flex-col">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-semibold">注文内容 <span className="text-[#e80113]">¥{order.total}</span></span>
+                <Badge className={statusLabels[order.status].className}>
+                  <div className="flex items-center">
+                    {statusLabels[order.status].icon}
+                    {statusLabels[order.status].text}
+                  </div>
+                </Badge>
+              </div>
+              <div className="text-sm text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap">
+                {order.items.slice(0, 1).map((item: OrderItem) => (
+                  <span key={item.id}>
+                    {item.name}
+                    {item.size && <span className="text-xs text-gray-500"> ({item.size})</span>}
+                    <span className="text-gray-500"> ×{item.quantity}</span>
+                  </span>
+                ))}
+                {order.items.length > 1 && <span className="text-gray-500"> 他{order.items.length - 1}点</span>}
+              </div>
+            </div>
+          </div>
+          
+          {/* 右側: 受取時間 */}
+          <div className="flex-shrink-0 text-right">
+            <div className="bg-white px-2 py-1 rounded-lg border border-gray-200 shadow-sm text-center">
+              <div className="text-xs text-gray-500">受取</div>
+              <div className="font-semibold text-sm text-[#e80113]">{order.timeSlot.time}</div>
+            </div>
+          </div>
+        </div>
+        
+        {/* 展開アイコン */}
+        <div className="flex justify-center mt-2">
+          <span className="text-xs text-gray-500 flex items-center">
+            {isExpanded ? '折りたたむ' : '詳細を表示'}
+            <svg className={`w-4 h-4 ml-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </span>
+        </div>
+      </div>
+      
+      {/* 展開時の詳細表示 */}
+      {isExpanded && (
+        <div className="border-t border-gray-200 p-4 bg-white">
+          {/* 注文情報ヘッダー */}
+          <div className="mb-3 bg-gray-50 p-2 rounded flex flex-wrap gap-2 md:gap-4 text-sm">
+            <div className="flex items-center">
+              <span className="text-gray-500 mr-1">注文ID:</span>
+              <span className="font-medium">#{order.id}</span>
+            </div>
+            <div className="flex items-center">
+              <Clock className="w-4 h-4 mr-1 text-gray-500" />
+              <span className="text-gray-700">{new Date(order.createdAt).toLocaleString()}</span>
+            </div>
+          </div>
+          
+          {/* 進捗ステータストラッカー */}
+          <div className="mb-4">
+            <OrderStatusTracker status={order.status} />
+          </div>
+          
+          {/* 注文内容詳細 */}
+          <div className="bg-gray-50 rounded-lg p-3 mb-4">
+            <h4 className="font-medium mb-2 text-gray-700">注文内容</h4>
+            <div className="space-y-2">
+              {order.items.map((item: OrderItem, index: number) => (
+                <div key={index} className="bg-white p-2 rounded-md border border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <div className="font-medium">{item.name}</div>
+                    <div className="text-sm">
+                      <span className="text-gray-500 mr-1">×{item.quantity}</span>
+                      <span className="font-semibold text-[#e80113]">¥{item.price * item.quantity}</span>
+                    </div>
+                  </div>
+                  {(item.size || (item.customizations && item.customizations.length > 0)) && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {item.size && (
+                        <span className="text-xs bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                          {item.size}
+                        </span>
+                      )}
+                      {item.customizations && item.customizations.map((customization, idx) => (
+                        <span key={idx} className="text-xs bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                          {getCustomizationLabel(customization)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-3">
+              <div className="bg-[#fff9dc] px-3 py-1 rounded-md border border-[#e80113] text-[#e80113] font-semibold">
+                合計: ¥{order.total}
+              </div>
+            </div>
+          </div>
+          
+          {/* 操作ボタン */}
+          <div className="flex justify-between items-center">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => setDetailOrder(order)}
+              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              詳細ダイアログを開く
+            </Button>
+            
+            <Select
+              value={order.status}
+              onValueChange={(value) => handleStatusChange(order.id, value)}
+              disabled={updateOrderStatusMutation.isPending}
+            >
+              <SelectTrigger className={`w-36 h-9 
+                ${order.status === 'new' ? 'bg-[#fee10b] text-black border-[#e80113]' : 
+                order.status === 'preparing' ? 'bg-blue-100 text-blue-800 border-blue-300' : 
+                'bg-green-100 text-green-800 border-green-300'}`}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new" className="flex items-center">
+                  <Clock className="w-4 h-4 mr-1 inline" /> 受付済み
+                </SelectItem>
+                <SelectItem value="preparing" className="flex items-center">
+                  <BowlSteamSpinner size="xs" className="mr-1 inline" /> 準備中
+                </SelectItem>
+                <SelectItem value="completed" className="flex items-center">
+                  <svg className="w-4 h-4 mr-1 text-green-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg> 完了
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * フィードバックタブコンポーネント
+ * 顧客からのフィードバック一覧を表示します
+ */
+function FeedbackTab() {
+  const { getAdminFeedback, adminFeedback, isLoadingAdminFeedback } = useFeedback();
+  const [selectedFeedback, setSelectedFeedback] = useState<any | null>(null);
+
+  // フィードバック一覧を取得
+  useEffect(() => {
+    getAdminFeedback();
+  }, [getAdminFeedback]);
+
+  if (isLoadingAdminFeedback) {
+    return (
+      <div className="text-center py-10">
+        <BowlSteamSpinner size="lg" className="mx-auto text-[#e80113] mb-4" />
+        <p className="text-gray-500">フィードバック情報を読み込んでいます...</p>
+      </div>
+    );
+  }
+
+  return (
+    <Card className="border-2 border-gray-100 shadow-md overflow-hidden mb-8">
+      <CardHeader className="bg-[#e80113] text-white py-4 px-6">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg font-bold">顧客フィードバック</CardTitle>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="p-6">
+        {adminFeedback.length === 0 ? (
+          <div className="text-center py-10">
+            <MessageSquare className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+            <h3 className="text-xl font-medium text-gray-700 mb-2">フィードバックはありません</h3>
+            <p className="text-gray-500">まだ顧客からのフィードバックはありません。</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {adminFeedback.map((feedback) => (
+              <div 
+                key={feedback.id} 
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center">
+                    <div className={`rounded-full p-2 mr-3 ${
+                      feedback.sentiment === "positive" 
+                        ? "bg-green-100 text-green-600" 
+                        : "bg-red-100 text-red-600"
+                    }`}>
+                      {feedback.sentiment === "positive" 
+                        ? <ThumbsUp className="h-4 w-4" /> 
+                        : <ThumbsDown className="h-4 w-4" />
+                      }
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <h3 className="font-bold text-gray-900">{feedback.userName}</h3>
+                        {feedback.rating && (
+                          <div className="px-2 py-1 bg-gray-100 rounded-full text-xs">
+                            {feedback.rating === 4 && "とても良い (4点)"}
+                            {feedback.rating === 3 && "良い (3点)"}
+                            {feedback.rating === 2 && "普通 (2点)"}
+                            {feedback.rating === 1 && "改善が必要 (1点)"}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {new Date(feedback.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {feedback.orderDetails && (
+                    <div className="flex items-center bg-[#fee10b]/10 px-3 py-1 rounded-full text-xs">
+                      <span className="text-gray-700 mr-1">呼出番号:</span>
+                      <span className="font-bold text-[#e80113]">{feedback.orderDetails.callNumber}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {feedback.comment && (
+                  <div className="bg-gray-50 p-3 rounded-md mt-3 text-sm">
+                    {feedback.comment}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * 管理者ページコンポーネント
+ * 注文状況の管理、ステータス更新、注文フィルタリング機能を提供します
+ * 注文受付状態の切り替えや注文一覧の表示・自動更新機能も実装しています
+ */
 export default function Admin() {
   const { isAuthenticated, isAdmin } = useAuth();
   const [, setLocation] = useLocation();
@@ -89,7 +380,9 @@ export default function Admin() {
   // useEffectを使用して更新を検出
   useEffect(() => {
     if (!isLoading && !isFetching && orders) {
+      // 更新情報を記録
       setLastRefreshTime(new Date());
+      
       // 更新アニメーションを表示
       setShowRefreshAnimation(true);
       setTimeout(() => setShowRefreshAnimation(false), 2000);
@@ -115,9 +408,13 @@ export default function Admin() {
       
       // Show success message specific to the status change
       const statusText = statusLabels[variables.status as keyof typeof statusLabels].text;
+      const order = orders?.find(o => o.id === variables.id);
+      const callNumber = order ? order.callNumber : variables.id;
+      
+      // 通知を表示
       toast({
         title: `ステータスを「${statusText}」に更新しました`,
-        description: `注文 #${variables.id} のステータスが正常に更新されました。`,
+        description: `呼出番号 ${callNumber} の注文のステータスが正常に更新されました。`,
       });
     },
     onError: (error: any) => {
@@ -215,10 +512,12 @@ export default function Admin() {
           <hr className="w-20 border-[#e80113] border-t-2 mb-3" />
         </div>
         <div className="flex flex-col items-center justify-center space-y-2">
-          <div className="flex justify-center items-center space-x-2">
-            <span className="text-sm bg-[#e80113] text-white px-3 py-1 rounded-md">
+          <div className="flex flex-wrap justify-center items-center gap-2">
+            <span className="text-sm bg-[#e80113] text-white px-3 py-1 rounded-md flex items-center">
+              <Clock className="w-4 h-4 mr-1" />
               現在の時刻: {currentTime.toLocaleTimeString()}
             </span>
+            
             <Button
               size="sm"
               onClick={() => {
@@ -233,12 +532,12 @@ export default function Admin() {
               {isFetching ? '更新中...' : '最新の情報に更新'}
             </Button>
           </div>
-          <div className="text-xs text-gray-600">
-            <span className={`transition-opacity duration-300 ${showRefreshAnimation ? 'opacity-100 font-bold text-[#e80113]' : 'opacity-70'}`}>
+          <div className="text-xs text-gray-700 bg-white px-3 py-1 rounded-full shadow-sm">
+            <span className={`transition-opacity duration-300 ${showRefreshAnimation ? 'opacity-100 font-bold text-[#e80113]' : 'opacity-80'}`}>
               最終更新: {lastRefreshTime.toLocaleTimeString()} 
               {showRefreshAnimation && <span className="ml-2 font-bold text-green-600">✓ 更新完了!</span>}
             </span>
-            <span className="ml-2 text-gray-500">(1分ごとに自動更新されます)</span>
+            <span className="ml-2 text-gray-500">(1分ごとに自動更新)</span>
           </div>
         </div>
       </div>
@@ -257,36 +556,91 @@ export default function Admin() {
               <p className="text-sm text-gray-500 mb-4">
                 注文の受付を一時的に停止または再開します。停止中は新規注文ができなくなります。
               </p>
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="accepting-orders"
-                  checked={isAcceptingOrders}
-                  onCheckedChange={async (checked) => {
-                    try {
-                      await updateStoreSettings(checked);
-                      await refetchStoreSettings();
-                      toast({
-                        title: checked ? "注文受付を再開しました" : "注文受付を停止しました",
-                        description: checked 
-                          ? "お客様からの新規注文を受け付けます。" 
-                          : "お客様からの新規注文を停止しました。既存の注文は処理されます。",
-                      });
-                    } catch (error) {
-                      console.error("Store settings update error:", error);
-                      toast({
-                        title: "エラーが発生しました",
-                        description: "設定の更新に失敗しました。もう一度お試しください。",
-                        variant: "destructive",
-                      });
+              <div className="flex flex-col">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Switch 
+                    id="accepting-orders"
+                    checked={isAcceptingOrders}
+                    onCheckedChange={async (checked) => {
+                      try {
+                        console.log(`Request to change accepting orders to: ${checked}`);
+                        await updateStoreSettings(checked);
+                        await refetchStoreSettings();
+                        toast({
+                          title: checked ? "注文受付を再開しました" : "注文受付を停止しました",
+                          description: checked 
+                            ? "お客様からの新規注文を受け付けます。" 
+                            : "お客様からの新規注文を停止しました。既存の注文は処理されます。",
+                        });
+                      } catch (error) {
+                        console.error("Store settings update error:", error);
+                        toast({
+                          title: "エラーが発生しました",
+                          description: "設定の更新に失敗しました。もう一度お試しください。",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  />
+                  <Label htmlFor="accepting-orders" className="cursor-pointer">
+                    {isAcceptingOrders 
+                      ? <span className="flex items-center text-green-600 font-bold"><PlayCircle className="w-4 h-4 mr-1" /> 注文受付中</span> 
+                      : <span className="flex items-center text-red-600 font-bold"><PauseCircle className="w-4 h-4 mr-1" /> 注文停止中</span>
                     }
-                  }}
-                />
-                <Label htmlFor="accepting-orders" className="cursor-pointer">
-                  {isAcceptingOrders 
-                    ? <span className="flex items-center text-green-600"><PlayCircle className="w-4 h-4 mr-1" /> 注文受付中</span> 
-                    : <span className="flex items-center text-red-600"><PauseCircle className="w-4 h-4 mr-1" /> 注文停止中</span>
-                  }
-                </Label>
+                  </Label>
+                </div>
+                
+                <div className="flex mt-2">
+                  <Button 
+                    size="sm" 
+                    onClick={async () => {
+                      try {
+                        await updateStoreSettings(true);
+                        await refetchStoreSettings();
+                        toast({
+                          title: "注文受付を再開しました",
+                          description: "お客様からの新規注文を受け付けます。",
+                        });
+                      } catch (error) {
+                        console.error("Error enabling order acceptance:", error);
+                        toast({
+                          title: "エラーが発生しました",
+                          description: "設定の更新に失敗しました。",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="mr-2 bg-green-600 hover:bg-green-700 text-white"
+                    disabled={isAcceptingOrders}
+                  >
+                    <PlayCircle className="w-4 h-4 mr-1" /> 受付開始
+                  </Button>
+                  
+                  <Button 
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await updateStoreSettings(false);
+                        await refetchStoreSettings();
+                        toast({
+                          title: "注文受付を停止しました",
+                          description: "お客様からの新規注文を停止しました。既存の注文は処理されます。",
+                        });
+                      } catch (error) {
+                        console.error("Error disabling order acceptance:", error);
+                        toast({
+                          title: "エラーが発生しました",
+                          description: "設定の更新に失敗しました。",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    disabled={!isAcceptingOrders}
+                  >
+                    <PauseCircle className="w-4 h-4 mr-1" /> 受付停止
+                  </Button>
+                </div>
               </div>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
@@ -303,380 +657,243 @@ export default function Admin() {
         </CardContent>
       </Card>
 
-      {/* Dashboard summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-white shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">全注文数</p>
-              <p className="text-2xl font-bold">{orderCounts.total}</p>
+      {/* Orders & Feedback tabs */}
+      <Tabs defaultValue="orders" className="mb-8">
+        <TabsList className="w-full bg-gray-100 p-0.5 mb-6">
+          <TabsTrigger 
+            value="orders" 
+            className="flex-1 py-3 bg-white data-[state=active]:bg-[#e80113] data-[state=active]:text-white rounded-md"
+          >
+            <div className="flex items-center justify-center">
+              注文管理
+              <Badge className="ml-2 bg-gray-100 text-black">{orderCounts.total}</Badge>
             </div>
-            <div className="bg-gray-100 rounded-full p-3">
-              <Filter className="w-5 h-5 text-gray-600" />
+          </TabsTrigger>
+          <TabsTrigger 
+            value="feedback" 
+            className="flex-1 py-3 bg-white data-[state=active]:bg-[#e80113] data-[state=active]:text-white rounded-md"
+          >
+            <div className="flex items-center justify-center">
+              フィードバック
             </div>
-          </CardContent>
-        </Card>
+          </TabsTrigger>
+        </TabsList>
         
-        <Card className="bg-white shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">受付済み</p>
-              <p className="text-2xl font-bold">{orderCounts.new}</p>
-            </div>
-            <div className="bg-[#fee10b]/20 rounded-full p-3">
-              <Clock className="w-5 h-5 text-[#e80113]" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-white shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">準備中</p>
-              <p className="text-2xl font-bold">{orderCounts.preparing}</p>
-            </div>
-            <div className="bg-blue-50 rounded-full p-3">
-              <BowlSteamSpinner size="xs" className="text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-white shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">完了</p>
-              <p className="text-2xl font-bold">{orderCounts.completed}</p>
-            </div>
-            <div className="bg-green-50 rounded-full p-3">
-              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Orders management section */}
-      <Card className="border-2 border-gray-100 shadow-md overflow-hidden mb-8">
-        <CardHeader className="bg-[#e80113] text-white py-4 px-6">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg font-bold">注文管理</CardTitle>
-            <div className="flex items-center space-x-2">
-              <Select 
-                value={filterStatus} 
-                onValueChange={(value) => setFilterStatus(value)}
-              >
-                <SelectTrigger className="bg-white text-gray-900 border-0 w-36 h-8">
-                  <SelectValue placeholder="全てのステータス" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全てのステータス</SelectItem>
-                  <SelectItem value="new">受付済みのみ</SelectItem>
-                  <SelectItem value="preparing">準備中のみ</SelectItem>
-                  <SelectItem value="completed">完了のみ</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSortNewest(!sortNewest)}
-                className="bg-white text-gray-900 border-0 h-8"
-              >
-                {sortNewest ? "新しい順" : "古い順"}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="p-0">
-          {(!filteredOrders || filteredOrders.length === 0) ? (
-            <div className="p-8 text-center">
-              <AlertCircle className="mx-auto h-10 w-10 text-gray-400 mb-3" />
-              <p className="text-gray-500">該当する注文はありません</p>
-              {filterStatus !== "all" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFilterStatus("all")}
-                  className="mt-4"
-                >
-                  フィルターをクリア
-                </Button>
-              )}
-            </div>
-          ) : (
-            <ul className="divide-y divide-gray-200">
-              {filteredOrders.map((order) => (
-                <li key={order.id} className="p-4 sm:p-6 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between flex-wrap md:flex-nowrap gap-4">
-                    <div className="flex-grow">
+        <TabsContent value="orders">
+          <Card className="border-2 border-gray-100 shadow-md overflow-hidden">
+            <CardHeader className="bg-[#e80113] text-white py-4 px-6">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg font-bold">注文一覧</CardTitle>
+                <div className="flex space-x-2">
+                  <Select
+                    value={filterStatus}
+                    onValueChange={setFilterStatus}
+                  >
+                    <SelectTrigger className="w-40 bg-white text-gray-800 border-none">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                          <span className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-[#e80113] text-white">
-                            <span className="text-xl font-bold">{order.callNumber}</span>
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <h3 className="text-lg font-bold text-gray-900 flex items-center">
-                            注文 #{order.id}
-                            <span className={`ml-3 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center ${statusLabels[order.status as keyof typeof statusLabels].className}`}>
-                              {statusLabels[order.status as keyof typeof statusLabels].icon}
-                              {statusLabels[order.status as keyof typeof statusLabels].text}
-                            </span>
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            注文時刻: {new Date(order.createdAt).toLocaleTimeString()} | 
-                            受取時間: <span className="font-medium text-[#e80113]">{order.timeSlot.time}</span>
-                          </p>
-                        </div>
+                        <Filter className="w-4 h-4 mr-1" />
+                        <SelectValue placeholder="すべて表示" />
                       </div>
-                      
-                      <div className="mt-3 ml-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
-                            <span>注文内容</span>
-                            <span className="ml-2 text-xs text-gray-500">({order.items.length}品目)</span>
-                          </h4>
-                          <div className="text-sm bg-gray-50 p-3 rounded-md">
-                            <div className="space-y-1 max-h-24 overflow-y-auto">
-                              {order.items.slice(0, 3).map((item: OrderItem, index: number) => (
-                                <div key={index} className="flex justify-between">
-                                  <span>{item.name} × {item.quantity}</span>
-                                  <span>¥{item.price * item.quantity}</span>
-                                </div>
-                              ))}
-                              {order.items.length > 3 && (
-                                <div className="text-xs text-center text-gray-500 mt-1 pt-1 border-t">
-                                  他 {order.items.length - 3} 品目...
-                                </div>
-                              )}
-                            </div>
-                            <div className="pt-2 mt-2 border-t border-gray-200 flex justify-between font-bold">
-                              <span>合計</span>
-                              <span>¥{order.total}</span>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="mt-1 w-full text-xs text-gray-500 hover:text-[#e80113]"
-                            onClick={() => setDetailOrder(order)}
-                          >
-                            詳細を表示
-                          </Button>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">すべての注文</SelectItem>
+                      <SelectItem value="new">
+                        <div className="flex items-center">
+                          <Clock className="w-4 h-4 mr-1" />
+                          受付済み ({orderCounts.new})
                         </div>
-                        
-                        <div className="flex flex-col space-y-3">
-                          <div className="bg-white p-3 rounded-md border border-gray-200">
-                            <h4 className="text-sm font-bold text-gray-900 mb-2">ステータス更新</h4>
-                            <RadioGroup 
-                              defaultValue={order.status}
-                              onValueChange={(value) => {
-                                if (value !== order.status) {
-                                  handleStatusChange(order.id, value);
-                                }
-                              }}
-                              className="flex flex-col space-y-1"
-                            >
-                              <div className="flex items-center space-x-2">
-                                <RadioGroupItem 
-                                  value="new" 
-                                  id={`new-${order.id}`} 
-                                  disabled={updateOrderStatusMutation.isPending}
-                                />
-                                <Label 
-                                  htmlFor={`new-${order.id}`}
-                                  className={`flex items-center text-sm cursor-pointer ${order.status === 'new' ? 'font-bold' : ''}`}
-                                >
-                                  <Clock className="w-3.5 h-3.5 mr-1" />
-                                  受付済み
-                                </Label>
-                              </div>
-                              
-                              <div className="flex items-center space-x-2">
-                                <RadioGroupItem 
-                                  value="preparing" 
-                                  id={`preparing-${order.id}`}
-                                  disabled={updateOrderStatusMutation.isPending}
-                                />
-                                <Label 
-                                  htmlFor={`preparing-${order.id}`}
-                                  className={`flex items-center text-sm cursor-pointer ${order.status === 'preparing' ? 'font-bold' : ''}`}
-                                >
-                                  <BowlSteamSpinner size="xs" className="mr-1 text-blue-600" />
-                                  準備中
-                                </Label>
-                              </div>
-                              
-                              <div className="flex items-center space-x-2">
-                                <RadioGroupItem 
-                                  value="completed" 
-                                  id={`completed-${order.id}`}
-                                  disabled={updateOrderStatusMutation.isPending}
-                                />
-                                <Label 
-                                  htmlFor={`completed-${order.id}`}
-                                  className={`flex items-center text-sm cursor-pointer ${order.status === 'completed' ? 'font-bold' : ''}`}
-                                >
-                                  <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                  完了
-                                </Label>
-                              </div>
-                            </RadioGroup>
-                            {updateOrderStatusMutation.isPending && updateOrderStatusMutation.variables?.id === order.id && (
-                              <div className="mt-2 flex items-center justify-center text-xs text-[#e80113]">
-                                <svg className="animate-spin -ml-1 mr-2 h-3 w-3 text-[#e80113]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                更新中...
-                              </div>
-                            )}
-                          </div>
+                      </SelectItem>
+                      <SelectItem value="preparing">
+                        <div className="flex items-center">
+                          <BowlSteamSpinner size="xs" className="mr-1" />
+                          準備中 ({orderCounts.preparing})
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Order details dialog */}
-      <Dialog open={!!detailOrder} onOpenChange={(open) => !open && setDetailOrder(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl flex items-center">
-              <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-[#e80113] text-white text-sm mr-2">
-                {detailOrder?.callNumber}
-              </span>
-              注文詳細 #{detailOrder?.id}
-            </DialogTitle>
-            <div className="flex items-center mt-1">
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${detailOrder?.status && statusLabels[detailOrder.status as keyof typeof statusLabels].className}`}>
-                {detailOrder?.status && statusLabels[detailOrder.status as keyof typeof statusLabels].text}
-              </span>
-              <span className="text-xs text-gray-500 ml-2">
-                注文時刻: {detailOrder && new Date(detailOrder.createdAt).toLocaleString()}
-              </span>
-            </div>
-          </DialogHeader>
-          
-          {detailOrder && (
-            <div className="mt-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-sm font-bold mb-2">注文詳細情報</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="text-gray-500">注文番号:</div>
-                      <div className="font-medium">{detailOrder.id}</div>
-                      
-                      <div className="text-gray-500">呼出番号:</div>
-                      <div className="font-medium">{detailOrder.callNumber}</div>
-                      
-                      <div className="text-gray-500">受取時間:</div>
-                      <div className="font-medium text-[#e80113]">{detailOrder.timeSlot.time}</div>
-                      
-                      <div className="text-gray-500">注文合計:</div>
-                      <div className="font-medium">¥{detailOrder.total}</div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-bold mb-2">ステータス管理</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    {/* 注文ステータストラッカー */}
-                    <div className="mb-4">
-                      <OrderStatusTracker status={detailOrder.status} />
-                    </div>
-                    <RadioGroup 
-                      defaultValue={detailOrder.status}
-                      onValueChange={(value) => {
-                        if (value !== detailOrder.status) {
-                          handleStatusChange(detailOrder.id, value);
-                          setDetailOrder({...detailOrder, status: value as "new" | "preparing" | "completed"});
-                        }
-                      }}
-                      className="space-y-2"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="new" id={`detail-new-${detailOrder.id}`} />
-                        <Label htmlFor={`detail-new-${detailOrder.id}`} className="flex items-center cursor-pointer">
-                          <Clock className="w-4 h-4 mr-2" />
-                          受付済み
-                        </Label>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="preparing" id={`detail-preparing-${detailOrder.id}`} />
-                        <Label htmlFor={`detail-preparing-${detailOrder.id}`} className="flex items-center cursor-pointer">
-                          <BowlSteamSpinner size="xs" className="mr-2 text-blue-600" />
-                          準備中
-                        </Label>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="completed" id={`detail-completed-${detailOrder.id}`} />
-                        <Label htmlFor={`detail-completed-${detailOrder.id}`} className="flex items-center cursor-pointer">
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      </SelectItem>
+                      <SelectItem value="completed">
+                        <div className="flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
-                          完了
-                        </Label>
-                      </div>
-                    </RadioGroup>
+                          完了 ({orderCounts.completed})
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSortNewest(!sortNewest)}
+                    className="bg-white hover:bg-gray-50 text-gray-800 border-none"
+                  >
+                    {sortNewest ? "新しい順" : "古い順"}
+                    <svg className={`ml-1 h-4 w-4 ${sortNewest ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                    </svg>
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="p-6">
+              {filteredOrders.length === 0 ? (
+                <div className="text-center py-10">
+                  <AlertCircle className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+                  <h3 className="text-xl font-medium text-gray-700 mb-2">注文がありません</h3>
+                  <p className="text-gray-500">
+                    現在、選択されたフィルター条件に一致する注文はありません。フィルターを変更するか、新しい注文をお待ちください。
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {filteredOrders.map((order) => (
+                    <OrderItem 
+                      key={order.id}
+                      order={order}
+                      handleStatusChange={handleStatusChange}
+                      updateOrderStatusMutation={updateOrderStatusMutation}
+                      setDetailOrder={setDetailOrder}
+                      statusLabels={statusLabels}
+                      getCustomizationLabel={getCustomizationLabel}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* 顧客フィードバックタブ */}
+        <TabsContent value="feedback">
+          <FeedbackTab />
+        </TabsContent>
+      </Tabs>
+      
+      {/* 注文詳細ダイアログ */}
+      <Dialog open={!!detailOrder} onOpenChange={(open) => !open && setDetailOrder(null)}>
+        <DialogContent className="max-w-3xl">
+          {detailOrder && (
+            <div>
+              <DialogHeader>
+                <DialogTitle className="flex items-center">
+                  <span className="text-xl">注文詳細</span>
+                  <Badge className={`ml-3 ${statusLabels[detailOrder.status].className}`}>
+                    <div className="flex items-center">
+                      {statusLabels[detailOrder.status].icon}
+                      {statusLabels[detailOrder.status].text}
+                    </div>
+                  </Badge>
+                </DialogTitle>
+                <DialogDescription>
+                  注文ID: #{detailOrder.id} | 呼出番号: <span className="font-bold text-[#e80113]">{detailOrder.callNumber}</span> | {new Date(detailOrder.createdAt).toLocaleString()}
+                </DialogDescription>
+              </DialogHeader>
+              
+              {/* 呼出番号と受取時間のバナー */}
+              <div className="bg-[#fff9dc] p-4 rounded-lg border border-[#e80113] my-4 flex flex-col md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center space-x-4 mb-3 md:mb-0">
+                  <div className="bg-white p-3 rounded-lg shadow-md border border-[#e80113]">
+                    <div className="text-xs text-center text-gray-500">呼出番号</div>
+                    <div className="text-4xl font-bold text-[#e80113] text-center">{detailOrder.callNumber}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-600">注文ID: #{detailOrder.id}</div>
+                    <div className="text-sm text-gray-600">{new Date(detailOrder.createdAt).toLocaleString()}</div>
+                  </div>
+                </div>
+                <div className="flex items-center bg-white px-4 py-2 rounded-lg shadow border border-[#e80113]">
+                  <Calendar className="h-5 w-5 mr-2 text-[#e80113]" />
+                  <div>
+                    <div className="text-xs text-gray-500">受取予定時間</div>
+                    <div className="font-semibold text-[#e80113]">{detailOrder.timeSlot.time}</div>
                   </div>
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                {/* ステータス更新パネル */}
+                <div>
+                  <Card className="overflow-hidden">
+                    <CardHeader className="bg-[#e80113] text-white py-3 px-4">
+                      <CardTitle className="text-sm">ステータス更新</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <RadioGroup
+                        value={detailOrder.status}
+                        onValueChange={(value) => handleStatusChange(detailOrder.id, value)}
+                        className="space-y-3"
+                      >
+                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'new' ? 'bg-yellow-50 border border-yellow-200' : ''}`}>
+                          <RadioGroupItem value="new" id={`detail-new-${detailOrder.id}`} />
+                          <Label htmlFor={`detail-new-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                            <Clock className="w-4 h-4 mr-2 text-[#e80113]" />
+                            受付済み
+                          </Label>
+                        </div>
+                        
+                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'preparing' ? 'bg-blue-50 border border-blue-200' : ''}`}>
+                          <RadioGroupItem value="preparing" id={`detail-preparing-${detailOrder.id}`} />
+                          <Label htmlFor={`detail-preparing-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                            <BowlSteamSpinner size="xs" className="mr-2 text-blue-600" />
+                            準備中
+                          </Label>
+                        </div>
+                        
+                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'completed' ? 'bg-green-50 border border-green-200' : ''}`}>
+                          <RadioGroupItem value="completed" id={`detail-completed-${detailOrder.id}`} />
+                          <Label htmlFor={`detail-completed-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                            <svg className="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            完了
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </CardContent>
+                  </Card>
+                </div>
               
-              <div>
-                <h3 className="text-sm font-bold mb-2">注文内容</h3>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left pb-2">商品名</th>
-                        <th className="text-center pb-2">数量</th>
-                        <th className="text-right pb-2">金額</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {detailOrder.items.map((item: OrderItem, index: number) => (
-                        <tr key={index} className="hover:bg-gray-100">
-                          <td className="py-2">
-                            <div className="font-medium">{item.name}</div>
-                            {item.size && (
-                              <div className="text-xs text-gray-500">サイズ: {item.size}</div>
-                            )}
-                            {item.customizations && item.customizations.length > 0 && (
-                              <div className="text-xs text-gray-500">
-                                カスタマイズ: {item.customizations.map(c => getCustomizationLabel(c)).join('、')}
+                {/* 注文内容テーブル */}
+                <div className="md:col-span-2">
+                  <Card className="overflow-hidden">
+                    <CardHeader className="bg-[#e80113] text-white py-3 px-4">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-sm">注文内容</CardTitle>
+                        <span className="font-bold">合計: ¥{detailOrder.total}</span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {detailOrder.items.map((item: OrderItem, index: number) => (
+                          <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="font-semibold">{item.name}</span>
+                              <div className="text-right">
+                                <span className="text-sm text-gray-500 mr-2">×{item.quantity}</span>
+                                <span className="font-semibold text-[#e80113]">¥{item.price * item.quantity}</span>
                               </div>
-                            )}
-                          </td>
-                          <td className="py-2 text-center">{item.quantity}</td>
-                          <td className="py-2 text-right">¥{item.price * item.quantity}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr className="font-bold">
-                        <td className="pt-3 text-left" colSpan={2}>合計</td>
-                        <td className="pt-3 text-right">¥{detailOrder.total}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {item.size && (
+                                <span className="text-xs bg-white px-2 py-0.5 rounded-md border border-gray-200">
+                                  サイズ: {item.size}
+                                </span>
+                              )}
+                              {item.customizations && item.customizations.map((customization, idx) => (
+                                <span key={idx} className="text-xs bg-white px-2 py-0.5 rounded-md border border-gray-200">
+                                  {getCustomizationLabel(customization)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
               
-              <div className="pt-2 flex justify-end">
+              <div className="pt-2 flex justify-end mt-4">
                 <Button onClick={() => setDetailOrder(null)}>閉じる</Button>
               </div>
             </div>

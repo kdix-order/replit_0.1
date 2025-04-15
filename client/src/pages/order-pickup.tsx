@@ -1,3 +1,8 @@
+/**
+ * 注文ピックアップページ
+ * 注文の受け取り画面を表示し、呼び出し番号を大きく表示するマクドナルドスタイルのUIを提供します
+ * 注文状態の追跡機能も含まれています
+ */
 import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -8,15 +13,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { Separator } from "@/components/ui/separator";
 import { FoodSpinner } from "@/components/ui/food-spinner";
 import { OrderStatusTracker } from "@/components/order-status-tracker";
-import QRCode from "react-qr-code";
 
+/**
+ * 注文ピックアップページコンポーネント
+ * 注文の受け取り情報を表示し、大きな呼び出し番号と呼び出し番号を提供します
+ * 注文状況のリアルタイム表示とマクドナルドスタイルのインターフェースを実装しています
+ */
 export default function OrderPickup() {
   const params = useParams<{ callNumber: string }>();
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const callNumber = params.callNumber;
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [showQRCode, setShowQRCode] = useState(false);
 
   // 現在時刻を1分ごとに更新
   useEffect(() => {
@@ -58,17 +66,12 @@ export default function OrderPickup() {
   // 15分後を受け取り目安時間とする
   const estimatedPickupTime = new Date(currentTime.getTime() + 15 * 60000);
   const formattedPickupTime = `${estimatedPickupTime.getHours()}:${String(estimatedPickupTime.getMinutes()).padStart(2, '0')}`;
-  
-  // デフォルトでQRコードは表示しない
-  useEffect(() => {
-    setShowQRCode(false);
-  }, [callNumber]);
 
   if (!callNumber) {
     setLocation("/");
     return null;
   }
-  
+
   // ログインしていない場合
   if (!isAuthenticated) {
     return (
@@ -88,7 +91,7 @@ export default function OrderPickup() {
       </div>
     );
   }
-  
+
   // エラーが発生した場合
   if (error) {
     return (
@@ -116,9 +119,6 @@ export default function OrderPickup() {
     );
   }
 
-  // QRコード用の値を作成（お客様の呼び出し番号）
-  const qrValue = `AJITEN-PICKUP-${callNumber}`;
-
   return (
     <div className="max-w-md mx-auto min-h-screen flex flex-col">
       {/* 上部の受け取り番号表示ヘッダー - マクドナルドスタイル */}
@@ -139,7 +139,7 @@ export default function OrderPickup() {
         <div className="text-[100px] leading-none font-bold text-white py-6">{callNumber}</div>
         <p className="text-sm text-white/80">この番号が呼ばれたらカウンターでお受け取りください</p>
       </div>
-      
+
       {/* 注文ステータストラッカー */}
       {order && (
         <div className="bg-white px-6 py-4">
@@ -147,22 +147,12 @@ export default function OrderPickup() {
         </div>
       )}
 
-      {/* QRコード（オプション） */}
+      {/* 呼出番号のステータス説明 */}
       <div className="px-6 py-4 bg-white border-t border-gray-100">
-        <Button
-          onClick={() => setShowQRCode(!showQRCode)}
-          variant="outline"
-          className="w-full border-gray-300 text-gray-600 hover:bg-gray-50"
-          size="sm"
-        >
-          {showQRCode ? "QRコードを隠す" : "店舗スキャン用QRコードを表示"}
-        </Button>
-        
-        {showQRCode && (
-          <div className="p-4 bg-white rounded-lg flex justify-center mt-4 border border-gray-200">
-            <QRCode value={qrValue} size={160} />
-          </div>
-        )}
+        <div className="text-center text-sm text-gray-600 py-2">
+          <p>カウンターで呼出番号をお伝えください</p>
+          <p className="mt-1">スタッフがお料理をお渡しします</p>
+        </div>
       </div>
 
       <Card className="mx-4 mt-4 shadow-md border-none">
@@ -211,7 +201,7 @@ export default function OrderPickup() {
           </div>
           <div className="text-sm text-gray-500 mt-1">PayPay決済済み</div>
         </CardContent>
-        
+
         <CardFooter className="bg-gray-50 p-4 flex flex-col gap-2">
           <Button 
             className="w-full bg-[#e80113] hover:bg-red-700 text-white"
@@ -220,7 +210,7 @@ export default function OrderPickup() {
             <History className="mr-2 h-4 w-4" />
             注文履歴を確認する
           </Button>
-          
+
           <Button 
             variant="outline"
             className="w-full border-gray-300"

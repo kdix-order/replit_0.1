@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, ShoppingCart, User, History, Settings } from "lucide-react";
+import { Home, ShoppingCart, User, History, Settings, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCart } from "@/hooks/use-cart";
 
@@ -10,7 +10,7 @@ export function BottomNav() {
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-      <div className="grid grid-cols-4 h-16">
+      <div className={`grid ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'} h-16`}>
         {/* ホーム */}
         <Link href="/">
           <div className="flex flex-col items-center justify-center h-full cursor-pointer">
@@ -40,38 +40,27 @@ export function BottomNav() {
           </div>
         </Link>
         
-        {/* 注文履歴 - ログイン済みの場合のみ表示 */}
-        <Link href={isAuthenticated ? "/orders" : "/"}>
+        {/* 注文履歴 */}
+        <Link href={isAuthenticated ? "/history" : "/"}>
           <div className={`flex flex-col items-center justify-center h-full cursor-pointer ${!isAuthenticated ? "opacity-50" : ""}`}>
-            <div className={`p-1 rounded-full ${location === "/orders" ? "bg-[#fee10b]" : "bg-transparent"}`}>
-              <History className={`h-5 w-5 ${location === "/orders" ? "text-black" : "text-gray-600"}`} />
+            <div className={`p-1 rounded-full ${location === "/history" ? "bg-[#fee10b]" : "bg-transparent"}`}>
+              <History className={`h-5 w-5 ${location === "/history" ? "text-black" : "text-gray-600"}`} />
             </div>
-            <span className={`text-xs mt-1 ${location === "/orders" ? "text-[#e80113] font-bold" : "text-gray-600"}`}>
+            <span className={`text-xs mt-1 ${location === "/history" ? "text-[#e80113] font-bold" : "text-gray-600"}`}>
               注文履歴
             </span>
           </div>
         </Link>
         
-        {/* アカウント/管理 */}
-        {isAdmin ? (
+        {/* 管理画面（管理者のみ表示） */}
+        {isAdmin && (
           <Link href="/admin">
             <div className="flex flex-col items-center justify-center h-full cursor-pointer">
               <div className={`p-1 rounded-full ${location === "/admin" ? "bg-[#fee10b]" : "bg-transparent"}`}>
-                <Settings className={`h-5 w-5 ${location === "/admin" ? "text-black" : "text-gray-600"}`} />
+                <ShieldCheck className={`h-5 w-5 ${location === "/admin" ? "text-black" : "text-gray-600"}`} />
               </div>
               <span className={`text-xs mt-1 ${location === "/admin" ? "text-[#e80113] font-bold" : "text-gray-600"}`}>
                 管理
-              </span>
-            </div>
-          </Link>
-        ) : (
-          <Link href={isAuthenticated ? "/account" : "/"}>
-            <div className="flex flex-col items-center justify-center h-full cursor-pointer">
-              <div className={`p-1 rounded-full ${location === "/account" ? "bg-[#fee10b]" : "bg-transparent"}`}>
-                <User className={`h-5 w-5 ${location === "/account" ? "text-black" : "text-gray-600"}`} />
-              </div>
-              <span className={`text-xs mt-1 ${location === "/account" ? "text-[#e80113] font-bold" : "text-gray-600"}`}>
-                {isAuthenticated ? "アカウント" : "ログイン"}
               </span>
             </div>
           </Link>

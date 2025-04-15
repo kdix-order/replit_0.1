@@ -44,6 +44,7 @@ export interface IStorage {
   createFeedback(feedback: InsertFeedback): Promise<Feedback>;
   getFeedbackByOrderId(orderId: number): Promise<Feedback | undefined>;
   getFeedbackByUserId(userId: number): Promise<Feedback[]>;
+  getAllFeedback(): Promise<Feedback[]>;
   
   // Store settings methods
   getStoreSettings(): Promise<StoreSetting>;
@@ -80,7 +81,13 @@ export class MemStorage implements IStorage {
     this.cartItemIdCounter = 1;
     this.timeSlotIdCounter = 1;
     this.orderIdCounter = 1;
-    this.callNumberCounter = 100;
+    
+    // 呼出番号カウンターの初期化 - 201から始まる三桁の番号システム
+    // マクドナルドのような呼出番号システム（201〜300で循環）
+    // 【編集方法】: 別の範囲を使用したい場合は、この値とgetNextCallNumber()メソッドの
+    // リセット条件を合わせて変更してください
+    this.callNumberCounter = 201; // 呼出番号の開始値（201）
+    
     this.feedbackIdCounter = 1;
     
     // 店舗設定の初期化
@@ -200,12 +207,24 @@ export class MemStorage implements IStorage {
     sampleProducts.forEach(product => this.addProduct(product));
     
     // Generate time slots
+    // 現在時刻から5分後を最短時間として設定し、10分間隔で時間枠を生成
     const now = new Date();
+    // 5分後の時間を計算（ミリ秒単位）
+    const fiveMinutesLater = now.getTime() + 5 * 60000;
+    // 10分単位に切り上げる（次の10分間隔の時間にする）
+    const roundedTime = Math.ceil(fiveMinutesLater / (10 * 60000)) * (10 * 60000);
+    
+    // 12個の時間枠を生成（2時間分）
     for (let i = 0; i < 12; i++) {
-      const slotTime = new Date(now.getTime() + (i + 1) * 10 * 60000);
-      const time = `${slotTime.getHours()}:${slotTime.getMinutes().toString().padStart(2, '0')}`;
+      const slotTime = new Date(roundedTime + i * 10 * 60000);
+      const hours = slotTime.getHours();
+      const minutes = slotTime.getMinutes();
+      const time = `${hours}:${minutes.toString().padStart(2, '0')}`;
+      
+      // すべての時間枠は最大10名まで
       const capacity = 10;
-      const available = Math.max(0, Math.floor(Math.random() * 10));
+      // 初期値として8-10人分の空きがあるようにする
+      const available = Math.floor(Math.random() * 3) + 8;
       
       this.addTimeSlot({
         time,
@@ -409,7 +428,25 @@ export class MemStorage implements IStorage {
     return updatedOrder;
   }
 
+  /**
+   * 次の呼出番号を取得するメソッド
+   * 
+   * 呼出番号は201-300の範囲で循環します。
+   * これはマクドナルドのような呼出番号システムで、
+   * 番号が多すぎると混乱を招くのを防ぐためです。
+   * 
+   * 【編集方法】
+   * - 番号の範囲を変更したい場合は、以下の条件と初期値を変更してください
+   * - initializeData()メソッド内のthis.callNumberCounter初期値も同様に変更する必要があります
+   * 
+   * @returns 次の利用可能な呼出番号（201-300の範囲）
+   */
   async getNextCallNumber(): Promise<number> {
+    // 呼出番号の最大値（300）を超えたら最小値（201）にリセット
+    if (this.callNumberCounter > 300) {
+      this.callNumberCounter = 201; // 呼出番号の最小値
+    }
+    // 現在の番号を返し、カウンターをインクリメント
     return this.callNumberCounter++;
   }
 
@@ -438,6 +475,11 @@ export class MemStorage implements IStorage {
   async getFeedbackByUserId(userId: number): Promise<Feedback[]> {
     return Array.from(this.feedbacks.values())
       .filter(feedback => feedback.userId === userId);
+  }
+  
+  async getAllFeedback(): Promise<Feedback[]> {
+    return Array.from(this.feedbacks.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 }
 
