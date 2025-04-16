@@ -13,7 +13,7 @@
 
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage } from "./storage/mem-storage";
 import { z } from "zod";
 import { insertUserSchema, insertCartItemSchema, insertOrderSchema, insertFeedbackSchema } from "@shared/schema";
 import passport from "passport";
