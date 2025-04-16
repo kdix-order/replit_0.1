@@ -161,7 +161,3 @@ export const configurePassport = (app: Express) => {
   app.use(passport.session());
 };
 
-// Helper function to create a JWT token
-export const generateToken = (userId: number): string => {
-  return jwt.sign({ userId }, JWT_SECRET(), { expiresIn: "24h" });
-};

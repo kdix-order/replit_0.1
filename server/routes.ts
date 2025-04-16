@@ -19,7 +19,8 @@ import { insertUserSchema, insertCartItemSchema, insertOrderSchema, insertFeedba
 import passport from "passport";
 import { createPayment, getPaymentDetails } from './paypay';
 import dotenv from 'dotenv';
-import { configurePassport, isAuthenticated, isAdmin, generateToken } from "./middlewares/auth";
+import { configurePassport, isAuthenticated, isAdmin } from "./middlewares/auth";
+import { generateToken, isAdminUser } from "./utils/auth";
 
 // 環境変数の読み込み
 dotenv.config();
@@ -652,16 +653,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-
-  // Helper function to check if user is admin
-  async function isAdminUser(req: Request): Promise<boolean> {
-    if (!req.user) return false;
-
-    const user = await storage.getUser(req.user.id);
-    if (!user) return false;
-
-    return user.isAdmin === true;
-  }
 
   const httpServer = createServer(app);
 
