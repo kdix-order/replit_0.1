@@ -6,8 +6,8 @@ import type {
   Product, StoreSetting, TimeSlot,
   TimeSlotWithAvailability,
   User
-} from "@shared/schema.ts";
-import { IStorage } from "./istorage.ts";
+} from "@shared/schema";
+import { IStorage } from "./istorage";
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;

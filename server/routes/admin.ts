@@ -3,9 +3,9 @@
  ***********************************/
 
 import express, { type Request, type Response } from "express";
-import { isAdmin, isAuthenticated } from "../middlewares/auth.ts";
-import { storage } from "../storage.ts";
-import { isAdminUser } from "../utils/auth.ts";
+import { isAdmin, isAuthenticated } from "../middlewares/auth";
+import { storage } from "../storage";
+import { isAdminUser } from "../utils/auth";
 
 const router = express.Router();
 

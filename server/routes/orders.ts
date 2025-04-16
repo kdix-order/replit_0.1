@@ -3,8 +3,8 @@
  ***********************************/
 
 import express from "express";
-import { isAuthenticated } from "../middlewares/auth.ts";
-import { storage } from "../storage.ts";
+import { isAuthenticated } from "../middlewares/auth";
+import { storage } from "../storage";
 
 const router = express.Router();
 

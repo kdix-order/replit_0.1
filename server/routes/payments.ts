@@ -3,8 +3,8 @@
  ***********************************/
 
 import express from "express";
-import { isAuthenticated } from "../middlewares/auth.ts";
-import { createPayment, getPaymentDetails } from "../paypay.ts";
+import { isAuthenticated } from "../middlewares/auth";
+import { createPayment, getPaymentDetails } from "../paypay";
 
 const router = express.Router();
 

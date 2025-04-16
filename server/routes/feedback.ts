@@ -3,11 +3,11 @@
  ***********************************/
 
 import express from "express";
-import { isAuthenticated } from "../middlewares/auth.ts";
-import { insertFeedbackSchema } from "@shared/schema.ts";
+import { isAuthenticated } from "../middlewares/auth";
+import { insertFeedbackSchema } from "@shared/schema";
 import { z } from "zod";
-import { storage } from "../storage.ts";
-import { isAdminUser } from "../utils/auth.ts";
+import { storage } from "../storage";
+import { isAdminUser } from "../utils/auth";
 
 const router = express.Router();
 
