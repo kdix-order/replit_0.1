@@ -243,7 +243,7 @@ export function ProductCustomizeDialog({
         </DialogHeader>
         
         <p id="customize-dialog-description" className="sr-only">
-          商品のサイズ、数量、カスタマイズオプションを選択するダイアログです。
+          商品のサイズ、数量、カスタマイズオプションを選択してください。
         </p>
         
         <div className="grid gap-4 py-2">
