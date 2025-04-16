@@ -1,7 +1,7 @@
 /**
  * routes.ts
  * アプリケーションのAPIエンドポイントとルーティングを定義するファイル
- * 
+ *
  * 主な機能:
  * - 認証サービス (JWT, Google OAuth)
  * - 製品一覧のエンドポイント
@@ -17,12 +17,9 @@ import { storage } from "./storage/mem-storage";
 import { z } from "zod";
 import { insertUserSchema, insertCartItemSchema, insertOrderSchema, insertFeedbackSchema } from "@shared/schema";
 import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import jwt from "jsonwebtoken";
-import session from "express-session";
-import memoryStore from "memorystore";
 import { createPayment, getPaymentDetails } from './paypay';
 import dotenv from 'dotenv';
+import { configurePassport, isAuthenticated, isAdmin, generateToken } from "./middlewares/auth";
 
 // 環境変数の読み込み
 dotenv.config();
@@ -40,182 +37,8 @@ declare global {
 }
 
 /**
- * 認証関連の設定
- * 
- * JWT認証とGoogle OAuth認証のために必要な環境変数と定数を設定します。
- * 本番環境では必ず環境変数を設定してください。
- * 
- * 【編集方法】
- * 1. JWT_SECRET: JWT認証用のシークレットキー（任意の文字列）
- * 2. GOOGLE_CLIENT_ID: Google Cloud Consoleで取得したOAuth2.0クライアントID
- * 3. GOOGLE_CLIENT_SECRET: Google Cloud Consoleで取得したOAuth2.0クライアントシークレット
- * 4. GOOGLE_ALLOWED_DOMAINS: 認証を許可するメールドメイン（カンマ区切りで複数指定可能）
- */
-
-// JWT認証用シークレット（本番環境では必ず環境変数で設定する）
-const JWT_SECRET = process.env.JWT_SECRET || "campus-order-jwt-secret";
-
-// Google OAuth認証用クライアントID・シークレット（デモ用デフォルト値）
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "your-google-client-id";
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "your-google-client-secret";
-
-// ドメイン制限設定（Google認証で許可するメールドメイン）
-const ALLOWED_DOMAIN = process.env.ALLOWED_DOMAIN || "xxx.ac.jp";
-
-// Middleware to check if user is authenticated
-const isAuthenticated = (req: Request, res: Response, next: any) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ message: "Authorization header missing" });
-  }
-
-  const token = authHeader.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "Token missing" });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
-    // 必ずuser情報をセットする
-    req.user = { id: decoded.userId };
-    next();
-  } catch (error) {
-    console.error("認証エラー:", error);
-    return res.status(401).json({ message: "Invalid token" });
-  }
-};
-
-// Middleware to check if user is admin
-const isAdmin = async (req: Request, res: Response, next: any) => {
-  // isAuthenticatedミドルウェアが先に実行されるため、req.userは必ず存在する
-  if (!req.user) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  try {
-    const user = await storage.getUser(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (!user.isAdmin) {
-      return res.status(403).json({ message: "Forbidden - Admin permission required" });
-    }
-
-    next();
-  } catch (error) {
-    console.error("Admin check error:", error);
-    return res.status(500).json({ message: "Internal server error during admin verification" });
-  }
-};
-
-// Configure Passport.js
-const configurePassport = (app: Express) => {
-  passport.serializeUser((user: any, done) => {
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      const user = await storage.getUser(id);
-      done(null, user);
-    } catch (error) {
-      done(error, null);
-    }
-  });
-
-  passport.use(
-    new GoogleStrategy(
-      {
-        clientID: GOOGLE_CLIENT_ID,
-        clientSecret: GOOGLE_CLIENT_SECRET,
-        callbackURL: "/api/auth/google/callback",
-      },
-      async (accessToken, refreshToken, profile, done) => {
-        try {
-          // プロフィール情報からメールアドレスを取得
-          const email = profile.emails?.[0]?.value;
-          
-          if (!email) {
-            console.error("Google認証: メールアドレスが取得できませんでした");
-            return done(new Error("メールアドレスが取得できませんでした"), undefined);
-          }
-
-          console.log(`Google認証: ログイン試行 - ${email}`);
-          
-          // 管理者特権アカウント
-          const ADMIN_EMAIL = 'someone@example.com';
-          const ALLOWED_DOMAINS = ['kindai.ac.jp', 'itp.kindai.ac.jp'];
-          
-          // メールアドレスの検証
-          const isAdmin = email === ADMIN_EMAIL;
-          const isAllowedDomain = ALLOWED_DOMAINS.some(domain => email.endsWith(`@${domain}`));
-          
-          // 許可されていないメールアドレスの場合
-          if (!isAdmin && !isAllowedDomain) {
-            console.warn(`Google認証: 許可されていないメールアドレスからのログイン試行: ${email}`);
-            return done(null, false, { 
-              message: "このメールアドレスではログインできません。@kindai.ac.jpまたは@itp.kindai.ac.jpのメールアドレスをご使用ください。" 
-            });
-          }
-
-          // ユーザーが既に存在するか確認
-          let user = await storage.getUserByEmail(email);
-          
-          if (!user) {
-            // 新規ユーザー作成
-            console.log(`Google認証: 新規ユーザー作成: ${profile.displayName} (${email})`);
-            user = await storage.createUser({
-              username: profile.displayName || email.split('@')[0],
-              password: `google-oauth-${Date.now()}`, // OAuth用のランダムパスワード
-              email,
-              isAdmin: isAdmin, // 管理者特権メールアドレスの場合は管理者権限を付与
-            });
-          } else {
-            console.log(`Google認証: 既存ユーザーでログイン: ${user.username} (${email})`);
-            
-            // 既存ユーザーでも管理者フラグを更新（特権アカウントが後から設定された場合に対応）
-            if (isAdmin && !user.isAdmin) {
-              // TODO: 管理者権限の更新処理を実装（現在の実装ではユーザー更新メソッドがないためコメントアウト）
-              // await storage.updateUser(user.id, { ...user, isAdmin: true });
-              console.log(`Google認証: 管理者権限を付与: ${email}`);
-            }
-          }
-
-          return done(null, user);
-        } catch (error) {
-          console.error("Google認証エラー:", error);
-          return done(error);
-        }
-      }
-    )
-  );
-
-  // Set up session
-  const MemoryStore = memoryStore(session);
-  app.use(
-    session({
-      secret: JWT_SECRET,
-      resave: false,
-      saveUninitialized: false,
-      store: new MemoryStore({
-        checkPeriod: 86400000, // prune expired entries every 24h
-      }),
-    })
-  );
-
-  app.use(passport.initialize());
-  app.use(passport.session());
-};
-
-// Helper function to create a JWT token
-const generateToken = (userId: number): string => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "24h" });
-};
-
-/**
  * すべてのAPIルートを登録する関数
- * 
+ *
  * この関数では以下の機能を提供するAPIエンドポイントを登録します：
  * - 認証関連（ログイン、ユーザー情報取得）
  * - 商品一覧の取得
@@ -223,7 +46,7 @@ const generateToken = (userId: number): string => {
  * - 注文の作成と取得
  * - 管理者機能（注文管理、店舗設定）
  * - フィードバック機能
- * 
+ *
  * @param app - Expressアプリケーションインスタンス
  * @returns HTTPサーバーインスタンス
  */
@@ -234,7 +57,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /***********************************
    * 認証関連のエンドポイント
    ***********************************/
-  
+
   // Google OAuth認証の開始エンドポイント
   app.get(
     "/api/auth/google",
@@ -243,25 +66,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get(
     "/api/auth/google/callback",
-    passport.authenticate("google", { 
+    passport.authenticate("google", {
       failureRedirect: "/?auth_error=true",
-      failureMessage: "認証に失敗しました。許可されたメールアドレスでログインしてください。" 
+      failureMessage: "認証に失敗しました。許可されたメールアドレスでログインしてください。"
     }),
     (req, res) => {
       const user = req.user as any;
       const token = generateToken(user.id);
-      
+
       // Redirect to frontend with token
       res.redirect(`/?token=${token}`);
     }
   );
-  
+
   // Admin demo login endpoint
   app.post("/api/auth/admin-demo-login", async (req, res) => {
     try {
       // Create or get admin demo user
       let user = await storage.getUserByEmail("admin-demo@example.com");
-      
+
       if (!user) {
         user = await storage.createUser({
           username: "管理者デモユーザー",
@@ -270,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isAdmin: true, // Set to true so they can access admin panel
         });
       }
-      
+
       const token = generateToken(user.id);
       res.json({ token, user: { ...user, password: undefined } });
     } catch (error) {
@@ -278,13 +101,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "サーバーエラーが発生しました" });
     }
   });
-  
+
   // Customer demo login endpoint
   app.post("/api/auth/customer-demo-login", async (req, res) => {
     try {
       // Create or get customer demo user
       let user = await storage.getUserByEmail("customer-demo@example.com");
-      
+
       if (!user) {
         user = await storage.createUser({
           username: "お客様デモユーザー",
@@ -293,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isAdmin: false, // Set to false for regular customer access
         });
       }
-      
+
       const token = generateToken(user.id);
       res.json({ token, user: { ...user, password: undefined } });
     } catch (error) {
@@ -308,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Don't send password to client
       const { password, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
@@ -320,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /***********************************
    * 商品関連のエンドポイント
    ***********************************/
-  
+
   // 全商品の取得
   app.get("/api/products", async (req, res) => {
     try {
@@ -334,7 +157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /***********************************
    * カート関連のエンドポイント
    ***********************************/
-  
+
   // ユーザーのカートアイテム取得
   app.get("/api/cart", isAuthenticated, async (req, res) => {
     try {
@@ -353,12 +176,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         size: z.string().default("並"),
         customizations: z.array(z.string()).default([])
       });
-      
+
       const validatedData = schema.parse({
         ...req.body,
         userId: req.user.id,
       });
-      
+
       const cartItem = await storage.addToCart(validatedData);
       res.status(201).json(cartItem);
     } catch (error) {
@@ -373,22 +196,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { quantity } = req.body;
-      
+
       if (typeof quantity !== "number" || quantity < 0) {
         return res.status(400).json({ message: "Invalid quantity" });
       }
-      
+
       if (quantity === 0) {
         await storage.deleteCartItem(id);
         return res.status(204).send();
       }
-      
+
       const updatedItem = await storage.updateCartItemQuantity(id, quantity);
-      
+
       if (!updatedItem) {
         return res.status(404).json({ message: "Cart item not found" });
       }
-      
+
       res.json(updatedItem);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
@@ -408,7 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /***********************************
    * 受け取り時間枠関連のエンドポイント
    ***********************************/
-  
+
   // 利用可能な時間枠一覧を取得
   app.get("/api/timeslots", async (req, res) => {
     try {
@@ -422,47 +245,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /***********************************
    * 注文関連のエンドポイント
    ***********************************/
-  
+
   // 新規注文の作成
   app.post("/api/orders", isAuthenticated, async (req, res) => {
     try {
       const { timeSlotId, paymentMethod } = req.body;
-      
+
       // Validate input
       if (!timeSlotId || typeof timeSlotId !== "number") {
         return res.status(400).json({ message: "Invalid time slot" });
       }
-      
+
       if (!paymentMethod || paymentMethod !== "paypay") {
         return res.status(400).json({ message: "Invalid payment method" });
       }
-      
+
       // Get cart items
       const cartItems = await storage.getCartItems(req.user.id);
-      
+
       if (cartItems.length === 0) {
         return res.status(400).json({ message: "Cart is empty" });
       }
-      
+
       // Check time slot availability
       const timeSlot = await storage.getTimeSlot(timeSlotId);
-      
+
       if (!timeSlot) {
         return res.status(404).json({ message: "Time slot not found" });
       }
-      
+
       if (timeSlot.available <= 0) {
         return res.status(400).json({ message: "Time slot is full" });
       }
-      
+
       // Calculate total
       const total = cartItems.reduce((sum, item) => {
         return sum + (item.quantity * item.product.price);
       }, 0);
-      
+
       // Get next call number
       const callNumber = await storage.getNextCallNumber();
-      
+
       // Create order
       const order = await storage.createOrder({
         userId: req.user.id,
@@ -479,14 +302,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customizations: item.customizations
         }))
       });
-      
+
       // Clear cart
       await storage.clearCart(req.user.id);
-      
+
       console.log(`Order confirmed: Call number ${callNumber}`);
-      
-      res.status(201).json({ 
-        ...order, 
+
+      res.status(201).json({
+        ...order,
         timeSlot
       });
     } catch (error) {
@@ -502,45 +325,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // 特定の注文を呼び出し番号で取得するAPI
   app.get("/api/orders/:callNumber", isAuthenticated, async (req, res) => {
     try {
       const { callNumber } = req.params;
       const callNumberInt = parseInt(callNumber, 10);
-      
+
       if (isNaN(callNumberInt)) {
         return res.status(400).json({ message: "Invalid call number" });
       }
-      
+
       // 全注文を取得して呼び出し番号でフィルタリング
       const userOrders = await storage.getOrdersByUser(req.user.id);
       const order = userOrders.find(o => o.callNumber === callNumberInt);
-      
+
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
       }
-      
+
       // 注文に対応するタイムスロット情報を取得
       const timeSlot = await storage.getTimeSlot(order.timeSlotId);
-      
+
       // レスポンスとしてタイムスロット情報も含める
       res.json({ ...order, timeSlot });
     } catch (error) {
       console.error("Order fetch error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "注文情報の取得中にエラーが発生しました",
-        error: error instanceof Error ? error.message : "Unknown error" 
+        error: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
-  
+
   // (最初のフィードバックルートセクションは削除)
 
   /***********************************
    * 管理者向けエンドポイント
    ***********************************/
-  
+
   // 全注文一覧（管理者用）
   app.get("/api/admin/orders", isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -557,51 +380,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.params.id || isNaN(parseInt(req.params.id))) {
         return res.status(400).json({ message: "Invalid order ID format" });
       }
-      
+
       const id = parseInt(req.params.id);
-      
+
       // Require status in request body
       if (!req.body || req.body.status === undefined) {
         return res.status(400).json({ message: "Status is required" });
       }
-      
+
       const { status } = req.body;
-      
+
       // Validate status value
       if (!["new", "preparing", "completed"].includes(status)) {
         return res.status(400).json({ message: "無効なステータスです。有効な値: 'new', 'preparing', 'completed'" });
       }
-      
+
       // Check if order exists first
       const existingOrder = await storage.getOrder(id);
       if (!existingOrder) {
         return res.status(404).json({ message: `注文ID: ${id} は見つかりませんでした` });
       }
-      
+
       // Update the order status
       const updatedOrder = await storage.updateOrderStatus(id, status);
-      
+
       if (!updatedOrder) {
         return res.status(500).json({ message: "ステータス更新に失敗しました" });
       }
-      
+
       // Fetch the updated order with time slot information
       const timeSlot = await storage.getTimeSlot(updatedOrder.timeSlotId);
-      
+
       // Log the successful status update
       console.log(`Order ${id} status updated to "${status}" successfully`);
-      
+
       // Return the updated order with time slot information
       res.json({ ...updatedOrder, timeSlot });
     } catch (error) {
       console.error("Order status update error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "ステータス更新中にエラーが発生しました",
-        error: error instanceof Error ? error.message : "Unknown error" 
+        error: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
-  
+
   // 店舗設定の取得 (一般ユーザー向け - 権限チェックなし)
   app.get("/api/store-settings", async (req, res) => {
     try {
@@ -619,33 +442,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(settings);
     } catch (error) {
       console.error("Store settings fetch error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "店舗設定の取得中にエラーが発生しました",
-        error: error instanceof Error ? error.message : "Unknown error" 
+        error: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
-  
+
   // 店舗設定の更新（注文受付の停止・再開）
   app.patch("/api/admin/store-settings", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const { acceptingOrders } = req.body;
-      
+
       if (typeof acceptingOrders !== 'boolean') {
-        return res.status(400).json({ 
-          message: "acceptingOrdersはブール値である必要があります" 
+        return res.status(400).json({
+          message: "acceptingOrdersはブール値である必要があります"
         });
       }
-      
+
       console.log(`Updating store settings: acceptingOrders=${acceptingOrders}`);
-      
+
       const settings = await storage.updateStoreSettings(acceptingOrders);
       res.json(settings);
     } catch (error) {
       console.error("Store settings update error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "店舗設定の更新中にエラーが発生しました",
-        error: error instanceof Error ? error.message : "Unknown error" 
+        error: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
@@ -653,12 +476,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /***********************************
    * フィードバック関連のエンドポイント
    ***********************************/
-  
+
   // フィードバックの送信
   app.post("/api/feedback", isAuthenticated, async (req, res) => {
     try {
       const { orderId, sentiment, rating, comment } = req.body;
-      
+
       // Validate input
       const schema = insertFeedbackSchema.extend({
         orderId: z.number().optional(),
@@ -666,34 +489,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rating: z.number().min(1).max(5).optional(),
         comment: z.string().optional(),
       });
-      
+
       const validatedData = schema.parse({
         ...req.body,
         userId: req.user.id,
       });
-      
+
       // Check if order exists if orderId is provided
       if (orderId) {
         const order = await storage.getOrder(orderId);
         if (!order) {
           return res.status(404).json({ message: "Order not found" });
         }
-        
+
         // Check if user owns the order
         if (order.userId !== req.user.id) {
           return res.status(403).json({ message: "Forbidden" });
         }
-        
+
         // Check if feedback already exists for this order
         const existingFeedback = await storage.getFeedbackByOrderId(orderId);
         if (existingFeedback) {
           return res.status(400).json({ message: "Feedback already submitted for this order" });
         }
       }
-      
+
       // Create feedback - createdAt is automatically set through the schema default
       const feedback = await storage.createFeedback(validatedData);
-      
+
       res.status(201).json(feedback);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -717,24 +540,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/feedback/order/:id", isAuthenticated, async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
-      
+
       // Check if order exists
       const order = await storage.getOrder(orderId);
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
       }
-      
+
       // Check if user owns the order
       if (order.userId !== req.user.id && !await isAdminUser(req)) {
         return res.status(403).json({ message: "Forbidden" });
       }
-      
+
       const feedback = await storage.getFeedbackByOrderId(orderId);
-      
+
       if (!feedback) {
         return res.status(404).json({ message: "Feedback not found" });
       }
-      
+
       res.json(feedback);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
@@ -748,16 +571,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!await isAdminUser(req)) {
         return res.status(403).json({ message: "Forbidden - Admin permissions required" });
       }
-      
+
       // すべてのフィードバックを取得
       const allFeedback = await storage.getAllFeedback();
-      
+
       // 注文情報とユーザー情報を付加
       const enrichedFeedback = await Promise.all(
         allFeedback.map(async (feedback) => {
           let orderDetails = null;
           let userName = 'Unknown user';
-          
+
           if (feedback.orderId) {
             const order = await storage.getOrder(feedback.orderId);
             if (order) {
@@ -770,12 +593,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             }
           }
-          
+
           const user = await storage.getUser(feedback.userId);
           if (user) {
             userName = user.username || user.email;
           }
-          
+
           return {
             ...feedback,
             orderDetails,
@@ -783,7 +606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
-      
+
       res.json(enrichedFeedback);
     } catch (error) {
       console.error('Error fetching feedback:', error);
@@ -794,21 +617,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /***********************************
    * PayPay決済関連のエンドポイント
    ***********************************/
-  
+
   // PayPay QRコード生成エンドポイント
   app.post("/api/payments/paypay/create", isAuthenticated, async (req, res) => {
     try {
       const { orderId, amount, description } = req.body;
-      
+
       if (!orderId || !amount || !description) {
         return res.status(400).json({ message: "必須パラメータが不足しています" });
       }
-      
+
       const response = await createPayment(orderId, amount, description);
       res.json(response);
     } catch (error) {
       console.error('PayPay QRコード生成エラー:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: '支払い処理中にエラーが発生しました',
         error: error instanceof Error ? error.message : "Unknown error"
       });
@@ -823,7 +646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(response);
     } catch (error) {
       console.error('PayPay 支払い状態確認エラー:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: '支払い状態確認中にエラーが発生しました',
         error: error instanceof Error ? error.message : "Unknown error"
       });
@@ -833,10 +656,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to check if user is admin
   async function isAdminUser(req: Request): Promise<boolean> {
     if (!req.user) return false;
-    
+
     const user = await storage.getUser(req.user.id);
     if (!user) return false;
-    
+
     return user.isAdmin === true;
   }
 
