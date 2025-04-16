@@ -82,10 +82,8 @@ export function usePayPay() {
     enabled: !!merchantPaymentId,
     refetchInterval: (data) => {
       // data自体がundefinedの場合は3秒ごとに更新
-      if (!data) return 3000;
-      
-      // TanStack Query v5では型が変わっているため、dataの構造を適切に処理
-      const responseData = data as unknown as PayPayStatusResponse;
+      const responseData = data.state.data;
+      if (!responseData) return 3000;
       
       // 支払いが完了またはキャンセルされたら更新を停止
       if (responseData.data?.status === 'COMPLETED' || 
