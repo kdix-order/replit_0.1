@@ -14,11 +14,6 @@
 
 1. リポジトリをフォークしてクローンします：
 
-```bash
-git clone https://github.com/[your-username]/ajiten-yakiman.git
-cd ajiten-yakiman
-```
-
 2. 依存関係をインストールします：
 
 ```bash
@@ -38,7 +33,7 @@ cp .env.example .env
 npm run dev
 ```
 
-5. ブラウザで `http://localhost:5000` にアクセスして開発を始めましょう！
+5. ブラウザで `http://localhost:3000` にアクセスして開発を始めましょう！
 
 ## プロジェクト構造
 
