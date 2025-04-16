@@ -292,38 +292,34 @@ export default function Cart() {
                   
                   {/* 数量調整と削除ボタン - モバイルでは下に配置 */}
                   <div className="mt-4 sm:mt-0 flex items-center justify-between sm:justify-end">
-                    <div className="flex items-center">
-                      <div className="flex border rounded-md shadow-sm">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="px-2 sm:px-3 py-1 text-gray-500 hover:bg-gray-100"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="px-3 sm:px-4 py-1 text-gray-900 font-medium">{item.quantity}</span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="px-2 sm:px-3 py-1 text-gray-500 hover:bg-gray-100"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
+                    <div className="flex border rounded-md shadow-sm">
+                      <Button 
+                        variant="ghost"
+                        onClick={() => {
+                          if (item.quantity > 1) {
+                            updateQuantity(item.id, item.quantity - 1);
+                          }
+                        }}
+                        disabled={item.quantity <= 1}
+                      >
+                        <Minus />
+                      </Button>
+                      <div className="px-3 py-2 bg-white border-x border-gray-200">
+                        {item.quantity}
                       </div>
                       <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="ml-2 sm:ml-4 text-[#e80113] hover:text-red-700"
-                        onClick={() => removeItem(item.id)}
+                        variant="ghost"
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
                       >
-                        <Trash2 className="h-5 w-5" />
+                        <Plus />
                       </Button>
                     </div>
-                    <div className="text-right font-medium text-gray-900 block sm:hidden">
-                      ¥{item.product.price * item.quantity}
-                    </div>
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => removeItem(item.id)}
+                    >
+                      <Trash2 />
+                    </Button>
                   </div>
                 </li>
               ))}
