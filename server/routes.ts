@@ -25,18 +25,6 @@ import { generateToken, isAdminUser } from "./utils/auth";
 // 環境変数の読み込み
 dotenv.config();
 
-// Add custom types for Express Request
-declare global {
-  namespace Express {
-    interface User {
-      id: number;
-    }
-    interface Request {
-      user?: User;
-    }
-  }
-}
-
 /**
  * すべてのAPIルートを登録する関数
  *
