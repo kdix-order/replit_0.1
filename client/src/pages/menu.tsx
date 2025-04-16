@@ -24,12 +24,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
  * @param props - ボタンのプロパティ
  * @param props.isAcceptingOrders - 注文受付状態
  * @param props.onClick - クリック時のコールバック関数
- * @param props.variant - ボタンのバリアント（"order" または "customize"）
+ * @param props.variant - ボタンのバリアント（"order" または "customize" または "topping"）
  */
 function OrderButton({ isAcceptingOrders, onClick, variant = "order" }: { 
   isAcceptingOrders: boolean; 
   onClick: () => void; 
-  variant?: "order" | "customize" 
+  variant?: "order" | "customize" | "topping" 
 }) {
   // 注文ボタン（並を注文）の表示設定
   if (variant === "order") {
@@ -46,6 +46,25 @@ function OrderButton({ isAcceptingOrders, onClick, variant = "order" }: {
           : <ShoppingBag className="h-4 w-4 mr-2 text-[#e80113]" />
         }
         {!isAcceptingOrders ? '停止中' : '並を注文'}
+      </Button>
+    );
+  }
+  
+  // トッピング注文ボタンの表示設定
+  if (variant === "topping") {
+    return (
+      <Button 
+        onClick={onClick}
+        className={`inline-flex items-center ${!isAcceptingOrders 
+          ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+          : 'bg-[#fff9dc] hover:bg-[#fffcea] text-black hover:shadow-lg'} font-bold shadow-md transition-all border ${!isAcceptingOrders ? 'border-gray-300' : 'border-[#e80113]/30'}`}
+        disabled={!isAcceptingOrders}
+      >
+        {!isAcceptingOrders 
+          ? <PauseCircle className="h-4 w-4 mr-2 text-gray-500" />
+          : <ShoppingBag className="h-4 w-4 mr-2 text-[#e80113]" />
+        }
+        {!isAcceptingOrders ? '停止中' : '注文'}
       </Button>
     );
   }
@@ -110,7 +129,7 @@ export default function Menu() {
     if (!isAuthenticated) {
       toast({
         title: "ログインしてください",
-        description: "商品を注文するには、ログインまたは会員登録が必要です。画面右上のログインボタンからお進みください。",
+        description: "商品を注文するには、ログインが必要です。画面右上のログインボタンからお進みください。",
         variant: "destructive",
       });
       return;
@@ -430,7 +449,7 @@ export default function Menu() {
                     <OrderButton 
                       isAcceptingOrders={isAcceptingOrders}
                       onClick={() => handleQuickBuy(product)}
-                      variant="order"
+                      variant="topping"
                     />
                   </div>
                 </div>
