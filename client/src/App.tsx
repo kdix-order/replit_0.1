@@ -9,6 +9,8 @@ import OrderConfirmation from "@/pages/order-confirmation";
 import OrderPickup from "@/pages/order-pickup";
 import OrderHistory from "@/pages/order-history";
 import Admin from "@/pages/admin";
+import Terms from "@/pages/terms";
+import Privacy from "@/pages/privacy";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Footer } from "@/components/layout/footer";
@@ -23,6 +25,8 @@ function Router() {
       <Route path="/pickup/:callNumber" component={OrderPickup} />
       <Route path="/history" component={OrderHistory} />
       <Route path="/admin" component={Admin} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -32,7 +36,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col min-h-screen bg-[#fff9dc]">
           <Header />
           <main className="flex-grow pb-16 md:pb-0">
             <Router />

@@ -1,3 +1,7 @@
+/**
+ * 注文確認ページ
+ * 注文完了後の確認画面を表示し、注文状況の追跡と受け取り情報を提供します
+ */
 import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -9,6 +13,11 @@ import { Separator } from "@/components/ui/separator";
 import { FoodSpinner } from "@/components/ui/food-spinner";
 import { OrderStatusTracker } from "@/components/order-status-tracker";
 
+/**
+ * 注文確認ページコンポーネント
+ * 注文完了後に表示され、注文番号、ステータス、受け取り情報などを表示します
+ * ユーザーは注文状態の確認やQRコード表示ページへの遷移が可能です
+ */
 export default function OrderConfirmation() {
   const params = useParams<{ callNumber: string }>();
   const [, setLocation] = useLocation();

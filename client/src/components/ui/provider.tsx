@@ -38,10 +38,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [, setLocation] = useLocation();
   const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
 
-  // Check for token in URL (from OAuth redirect)
+  // Check for token in URL (from OAuth redirect) or auth errors
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenParam = urlParams.get("token");
+    const authError = urlParams.get("auth_error");
     
     if (tokenParam) {
       localStorage.setItem("token", tokenParam);
@@ -49,8 +50,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Remove token from URL
       window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Google認証成功メッセージを表示
+      toast({
+        title: "ログイン成功",
+        description: "Googleアカウントでログインしました",
+        variant: "default"
+      });
+      
+      // すべてのクエリをリフレッシュ
+      queryClient.invalidateQueries();
     }
-  }, []);
+    
+    // 認証エラー処理
+    if (authError) {
+      // URLからauth_errorパラメータを削除
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // エラーメッセージを表示
+      toast({
+        title: "ログインに失敗しました",
+        description: "許可されたメールアドレスでログインしてください。(@kindai.ac.jpまたは@itp.kindai.ac.jpのアドレスのみ使用可能です)",
+        variant: "destructive",
+        duration: 7000,
+      });
+    }
+  }, [toast]);
 
   // Fetch user data if we have a token
   const { data: user, isLoading } = useQuery({
@@ -81,6 +106,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const login = () => {
+    // Google認証開始前にトーストメッセージを表示
+    toast({
+      title: "Google認証に移動します",
+      description: "Googleのログイン画面に移動します。近畿大学のメールアドレス (@kindai.ac.jp または @itp.kindai.ac.jp) でログインしてください。",
+      duration: 5000,
+    });
+    
+    // Google認証ページへリダイレクト
     window.location.href = "/api/auth/google";
   };
   

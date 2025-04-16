@@ -15,14 +15,15 @@ export function useStoreSettings() {
     error,
     refetch 
   } = useQuery<StoreSettings>({
-    queryKey: ["/api/admin/store-settings"],
-    staleTime: 1000 * 60, // 1分間キャッシュ
-    refetchInterval: 1000 * 60 * 5, // 5分ごとに更新
+    queryKey: ["/api/store-settings"],
+    staleTime: 1000 * 30, // 30秒間キャッシュ
+    refetchInterval: 1000 * 60, // 1分ごとに更新
+    retry: 3, // エラー時に3回まで再試行
   });
 
   return {
     storeSettings,
-    isAcceptingOrders: storeSettings?.acceptingOrders ?? true,
+    isAcceptingOrders: storeSettings?.acceptingOrders ?? true, // デフォルトでは注文可能と判断
     isLoading,
     error,
     refetch,
@@ -32,25 +33,35 @@ export function useStoreSettings() {
 // 管理者用の店舗設定更新フック
 export function useUpdateStoreSettings() {
   const updateStoreSettings = async (acceptingOrders: boolean): Promise<StoreSettings> => {
-    const response = await fetch("/api/admin/store-settings", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({ acceptingOrders }),
-    });
+    try {
+      console.log(`Updating store settings: acceptingOrders=${acceptingOrders}`);
+      
+      const response = await fetch("/api/admin/store-settings", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ acceptingOrders }),
+      });
 
-    if (!response.ok) {
-      throw new Error("Failed to update store settings");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update store settings");
+      }
+
+      const updatedSettings = await response.json();
+      console.log("Store settings updated successfully:", updatedSettings);
+      
+      // 両方のキャッシュを更新（管理者用と一般ユーザー用）
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/store-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/store-settings"] });
+      
+      return updatedSettings;
+    } catch (error) {
+      console.error("Error updating store settings:", error);
+      throw error;
     }
-
-    const updatedSettings = await response.json();
-    
-    // キャッシュを更新
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/store-settings"] });
-    
-    return updatedSettings;
   };
 
   return { updateStoreSettings };
