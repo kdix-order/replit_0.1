@@ -144,7 +144,7 @@ const configurePassport = (app: Express) => {
           console.log(`Google認証: ログイン試行 - ${email}`);
           
           // 管理者特権アカウント
-          const ADMIN_EMAIL = 'yutonaka911@gmail.com';
+          const ADMIN_EMAIL = 'someone@example.com';
           const ALLOWED_DOMAINS = ['kindai.ac.jp', 'itp.kindai.ac.jp'];
           
           // メールアドレスの検証
