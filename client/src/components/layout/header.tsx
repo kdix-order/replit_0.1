@@ -105,6 +105,37 @@ export function Header() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button 
+                        className="bg-[#fee10b] text-black hover:bg-[#ffd000] font-bold shadow-md hover:shadow-lg transition-all duration-200 rounded-lg"
+                        size="sm"
+                      >
+                        ログイン
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-white border border-gray-200">
+                      <DropdownMenuItem 
+                        onClick={() => window.location.href = "/api/auth/google"} 
+                        className="cursor-pointer hover:bg-[#fee10b] hover:text-black flex items-center"
+                      >
+                        <img
+                          src="https://developers.google.com/identity/images/g-logo.png"
+                          alt="Google"
+                          className="w-4 h-4 mr-2"
+                        />
+                        Googleでログイン
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={adminDemoLogin} className="cursor-pointer hover:bg-[#fee10b] hover:text-black">
+                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        管理者としてログイン
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={customerDemoLogin} className="cursor-pointer hover:bg-[#fee10b] hover:text-black">
+                        <Users className="mr-2 h-4 w-4" />
+                        お客様としてログイン
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
                         className="bg-black text-white hover:bg-gray-800 font-bold shadow-md hover:shadow-lg transition-all duration-200 rounded-lg"
                         size="sm"
                       >
