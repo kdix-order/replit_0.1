@@ -6,7 +6,7 @@ import type {
     Product, StoreSetting, TimeSlot,
     TimeSlotWithAvailability,
     User
-} from "@shared/schema.ts";
+} from "@shared/schema";
 
 export interface IStorage {
     // User methods
