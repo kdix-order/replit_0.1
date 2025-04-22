@@ -7,6 +7,10 @@ type PayPayPaymentStatus = 'CREATED' | 'AUTHORIZED' | 'COMPLETED' | 'FAILED' | '
 
 type PayPayQRCodeResponse = {
   status: string;
+  resultInfo: {
+    code: string;
+    message: string;
+  };
   data: {
     paymentId: string;
     merchantPaymentId: string;
@@ -30,34 +34,33 @@ type PayPayStatusResponse = {
  */
 export function usePayPay() {
   const [merchantPaymentId, setMerchantPaymentId] = useState<string | null>(null);
-  
+
   // PayPay QRコード生成
   const createPaymentMutation = useMutation({
-    mutationFn: async ({ 
-      orderId, 
-      amount, 
-      description 
-    }: { 
-      orderId: string; 
-      amount: number; 
-      description: string 
+    mutationFn: async ({
+                         orderId,
+                         amount,
+                         description
+                       }: {
+      orderId: string;
+      amount: number;
+      description: string
     }) => {
-      const response = await apiRequest('POST', '/api/payments/paypay/create', {
+      const response = (await apiRequest('POST', '/api/payments/paypay/create', {
         orderId,
         amount,
         description
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'PayPayでの支払い処理中にエラーが発生しました');
+      })) as { BODY: PayPayQRCodeResponse };
+
+      if (response.BODY.resultInfo.code !== 'SUCCESS') {
+        throw new Error(response.BODY.resultInfo.message || 'PayPayでの支払い処理中にエラーが発生しました');
       }
-      
-      return response.json() as Promise<PayPayQRCodeResponse>;
+
+      return response;
     },
     onSuccess: (data) => {
-      if (data.data?.merchantPaymentId) {
-        setMerchantPaymentId(data.data.merchantPaymentId);
+      if (data.BODY.data?.url) {
+        window.location.href = data.BODY.data?.url;
       }
     }
   });
@@ -69,14 +72,14 @@ export function usePayPay() {
       if (!merchantPaymentId) {
         throw new Error('支払いIDが設定されていません');
       }
-      
+
       const response = await apiRequest('GET', `/api/payments/paypay/status/${merchantPaymentId}`);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || '支払い状態確認中にエラーが発生しました');
       }
-      
+
       return response.json() as Promise<PayPayStatusResponse>;
     },
     enabled: !!merchantPaymentId,
@@ -84,11 +87,11 @@ export function usePayPay() {
       // data自体がundefinedの場合は3秒ごとに更新
       const responseData = data.state.data;
       if (!responseData) return 3000;
-      
+
       // 支払いが完了またはキャンセルされたら更新を停止
-      if (responseData.data?.status === 'COMPLETED' || 
-          responseData.data?.status === 'CANCELED' || 
-          responseData.data?.status === 'FAILED') {
+      if (responseData.data?.status === 'COMPLETED' ||
+        responseData.data?.status === 'CANCELED' ||
+        responseData.data?.status === 'FAILED') {
         return false;
       }
       // それ以外は3秒ごとに更新
@@ -106,12 +109,12 @@ export function usePayPay() {
     createPayment: createPaymentMutation.mutate,
     isCreating: createPaymentMutation.isPending,
     paymentError: createPaymentMutation.error?.message,
-    paymentData: createPaymentMutation.data?.data,
-    
+    paymentData: createPaymentMutation.data?.BODY,
+
     paymentStatus: paymentStatus.data?.data?.status,
     isCheckingStatus: paymentStatus.isLoading,
     statusError: paymentStatus.error?.message,
-    
+
     resetPaymentStatus,
   };
 }

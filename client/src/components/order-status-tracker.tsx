@@ -13,7 +13,7 @@ import { CheckCircle, Clock, ChefHat } from "lucide-react"; // アイコンコ�
  * @property status - 現在の注文ステータス（"new":新規注文, "preparing":調理中, "completed":完了）
  */
 type OrderStatusTrackerProps = {
-  status: "new" | "preparing" | "completed";
+  status: "new" | "paid" | "preparing" | "completed";
 };
 
 /**
@@ -28,7 +28,8 @@ export function OrderStatusTracker({ status }: OrderStatusTrackerProps) {
    * 各ステップのアニメーション完了状態を保持します
    */
   const [animationComplete, setAnimationComplete] = useState({
-    toNew: false,      // 新規注文ステップのアニメーション完了状態
+    toNew: false,       // 新規注文ステップのアニメーション完了状態
+    toPaid: false,      // 支払いステップのアニメーション完了状態
     toPreparing: false, // 調理中ステップのアニメーション完了状態
     toCompleted: false, // 完了ステップのアニメーション完了状態
   });
@@ -40,26 +41,32 @@ export function OrderStatusTracker({ status }: OrderStatusTrackerProps) {
   useEffect(() => {
     if (status === "new") {
       // 新規注文のみ完了
-      setAnimationComplete({ toNew: true, toPreparing: false, toCompleted: false });
+      setAnimationComplete({ toNew: true, toPaid: false, toPreparing: false, toCompleted: false });
+    } else if (status === "paid") {
+      // 新規注文と支払いまで完了
+      setAnimationComplete({ toNew: true, toPaid: true, toPreparing: false, toCompleted: false });
     } else if (status === "preparing") {
       // 新規注文と調理中まで完了
-      setAnimationComplete({ toNew: true, toPreparing: true, toCompleted: false });
+      setAnimationComplete({ toNew: true, toPaid: true, toPreparing: true, toCompleted: false });
     } else if (status === "completed") {
       // すべてのステップ完了
-      setAnimationComplete({ toNew: true, toPreparing: true, toCompleted: true });
+      setAnimationComplete({ toNew: true, toPaid: true, toPreparing: true, toCompleted: true });
     }
   }, [status]);
 
   /**
    * 各ステップが「アクティブ」か「非アクティブ」かを判定する関数
    * 現在のステータスとターゲットステップに基づいて状態を返します
-   * 
-   * @param step - 判定するステップ 
+   *
+   * @param step - 判定するステップ
    * @returns "active"（アクティブ）または"inactive"（非アクティブ）
    */
-  const getStepState = (step: "new" | "preparing" | "completed") => {
-    if (step === "new" && (status === "new" || status === "preparing" || status === "completed")) {
+  const getStepState = (step: "new" | "paid" | "preparing" | "completed") => {
+    if (step === "new" && (status === "new" || status === "paid" || status === "preparing" || status === "completed")) {
       // 新規注文ステップはどのステータスでもアクティブ
+      return "active";
+    } else if (step === "paid" && (status === "paid" || status === "preparing" || status === "completed")) {
+      // 支払いステップは「支払い」または「調理中」または「完了」状態でアクティブ
       return "active";
     } else if (step === "preparing" && (status === "preparing" || status === "completed")) {
       // 調理中ステップは「調理中」または「完了」状態でアクティブ
@@ -87,9 +94,10 @@ export function OrderStatusTracker({ status }: OrderStatusTrackerProps) {
    */
   const progressVariants = {
     // 新規注文から調理中への進捗
-    newToPreparing: { width: status === "new" ? "0%" : "50%" },
+    newToPaid: { width: status === "new" ? "0%" : "33%" },
+    paidToPreparing: { width: status === "paid" ? "33%" : status === "preparing" ? "66%" : "0%" },
     // 調理中から完了への進捗
-    preparingToCompleted: { width: status === "completed" ? "100%" : status === "preparing" ? "50%" : "0%" },
+    preparingToCompleted: { width: status === "completed" ? "100%" : status === "preparing" ? "66%" : "0%" },
   };
 
   /**
@@ -100,14 +108,17 @@ export function OrderStatusTracker({ status }: OrderStatusTrackerProps) {
     <div className="relative w-full max-w-3xl mx-auto py-6">
       {/* 進捗バー - 背景（灰色の横線） */}
       <div className="absolute top-[43px] left-0 right-0 h-2 bg-gray-200 rounded-full mx-12"></div>
-      
+
       {/* 進捗バー - アクティブ部分（ステータスに応じて動的に幅が変化する赤→黄のグラデーション） */}
       <motion.div
         className="absolute top-[43px] left-0 h-2 bg-gradient-to-r from-[#e80113] to-[#fee10b] rounded-full mx-12"
         initial={{ width: "0%" }} // 初期状態は幅0
-        animate={{ 
+        animate={{
           // ステータスに応じてプログレスバーの進行度を変更
-          width: status === "new" ? "0%" : status === "preparing" ? "50%" : "100%" 
+          width: status === "new" ? "0%"
+            : status === "paid" ? "33%"
+            : status === "preparing" ? "66%"
+              : "100%"
         }}
         // スムーズなアニメーション設定
         transition={{ duration: 0.8, ease: "easeInOut" }}
@@ -131,7 +142,7 @@ export function OrderStatusTracker({ status }: OrderStatusTrackerProps) {
             whileHover={{ scale: 1.05 }} // ホバー時に少し拡大
             whileTap={{ scale: 0.95 }}    // クリック時に少し縮小
           >
-            <Clock className="w-6 h-6" /> {/* 時計アイコン */}
+            <Clock className="w-6 h-6"/> {/* 時計アイコン */}
           </motion.div>
           {/* ステップラベル - アクティブ時は赤文字、非アクティブ時は灰色文字 */}
           <span className={`text-sm font-medium ${
@@ -156,7 +167,7 @@ export function OrderStatusTracker({ status }: OrderStatusTrackerProps) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <ChefHat className="w-6 h-6" /> {/* シェフハットアイコン */}
+            <ChefHat className="w-6 h-6"/> {/* シェフハットアイコン */}
           </motion.div>
           {/* ステップラベル */}
           <span className={`text-sm font-medium ${
@@ -181,7 +192,7 @@ export function OrderStatusTracker({ status }: OrderStatusTrackerProps) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <CheckCircle className="w-6 h-6" /> {/* チェックマークアイコン */}
+            <CheckCircle className="w-6 h-6"/> {/* チェックマークアイコン */}
           </motion.div>
           {/* ステップラベル */}
           <span className={`text-sm font-medium ${
@@ -201,7 +212,11 @@ export function OrderStatusTracker({ status }: OrderStatusTrackerProps) {
       >
         {/* 新規注文時のメッセージ */}
         {status === "new" && (
-          <p className="text-lg font-medium">ご注文を受け付けました。まもなく調理を開始します。</p>
+          <p className="text-lg font-medium">ご注文を受け付けました。支払い後調理を開始します。</p>
+        )}
+        {/* 支払い時のメッセージ */}
+        {status === "paid" && (
+          <p className="text-lg font-medium">お支払いが完了しました。調理を開始します。</p>
         )}
         {/* 調理中のメッセージ */}
         {status === "preparing" && (

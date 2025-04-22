@@ -65,9 +65,6 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
       }))
     });
 
-    // Clear cart
-    await storage.clearCart(req.user.id);
-
     console.log(`Order confirmed: Call number ${callNumber}`);
 
     res.status(201).json({

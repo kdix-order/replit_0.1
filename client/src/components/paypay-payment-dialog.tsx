@@ -83,47 +83,47 @@ export function PayPayPaymentDialog({
    * ダイアログが閉じられた時の処理
    * 決済状態をリセットして、初期状態に戻します（成功状態以外の場合）
    */
-  useEffect(() => {
-    if (!isOpen) {
-      // PayPay関連の状態をリセット
-      resetPaymentStatus();
-      // 成功状態以外の場合は初期状態に戻す
-      if (processingState !== "success") {
-        setProcessingState("initial");
-      }
-    }
-  }, [isOpen, resetPaymentStatus, processingState]);
-  
+  // useEffect(() => {
+  //   if (!isOpen) {
+  //     // PayPay関連の状態をリセット
+  //     resetPaymentStatus();
+  //     // 成功状態以外の場合は初期状態に戻す
+  //     if (processingState !== "success") {
+  //       setProcessingState("initial");
+  //     }
+  //   }
+  // }, [isOpen, resetPaymentStatus, processingState]);
+  //
   /**
    * PayPay決済状態の監視
    * 決済状態に応じて画面表示を変更します
    */
-  useEffect(() => {
-    if (paymentStatus === 'COMPLETED') {
-      // 決済完了時の処理
-      setProcessingState("success");
-      
-      // 呼出番号がない場合はonSuccessコールバックを呼び出し
-      // （注文作成フローの途中の場合）
-      if (!callNumber) {
-        setTimeout(() => onSuccess(), 1000);
-      }
-    } else if (paymentStatus === 'FAILED' || paymentStatus === 'CANCELED') {
-      // 決済失敗/キャンセル時の処理
-      setProcessingState("error");
-    }
-  }, [paymentStatus, callNumber, onSuccess]);
-  
+  // useEffect(() => {
+  //   if (paymentStatus === 'COMPLETED') {
+  //     // 決済完了時の処理
+  //     setProcessingState("success");
+  //
+  //     // 呼出番号がない場合はonSuccessコールバックを呼び出し
+  //     // （注文作成フローの途中の場合）
+  //     if (!callNumber) {
+  //       setTimeout(() => onSuccess(), 1000);
+  //     }
+  //   } else if (paymentStatus === 'FAILED' || paymentStatus === 'CANCELED') {
+  //     // 決済失敗/キャンセル時の処理
+  //     setProcessingState("error");
+  //   }
+  // }, [paymentStatus, callNumber, onSuccess]);
+  //
   /**
    * 呼出番号が設定されている場合の処理
    * 既に注文が完了している状態で、呼出番号表示モードに移行します
    */
-  useEffect(() => {
-    if (callNumber && isOpen) {
-      console.log("Call number detected, setting success state:", callNumber);
-      setProcessingState("success");
-    }
-  }, [callNumber, isOpen]);
+  // useEffect(() => {
+  //   if (callNumber && isOpen) {
+  //     console.log("Call number detected, setting success state:", callNumber);
+  //     setProcessingState("success");
+  //   }
+  // }, [callNumber, isOpen]);
 
   /**
    * 決済処理開始ハンドラー
