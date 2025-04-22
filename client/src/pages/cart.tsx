@@ -80,8 +80,6 @@ export default function Cart() {
     },
     onSuccess: (data) => {
       console.log("Order success:", data);
-      // clearCart();
-      // queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       setIsCheckoutOpen(false);
       setPaymentProcessing(true);
@@ -113,31 +111,6 @@ export default function Cart() {
       paymentMethod: "paypay"
     });
     setIsCheckoutOpen(false); // 注文確認ダイアログを閉じる
-  };
-
-  const handlePayPaySuccess = () => {
-    console.log('PayPay payment successful, placing order...');
-    // PayPay決済が成功したら注文処理を実行
-    if (!selectedTimeSlotId) {
-      toast({
-        title: "エラー",
-        description: "時間枠が選択されていません。もう一度お試しください。",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setPaymentProcessing(true);
-
-    // 成功メッセージを表示
-    toast({
-      title: "決済完了",
-      description: "PayPayでの支払いが完了しました。注文を処理しています。",
-      variant: "default",
-    });
-
-    // PayPayダイアログを閉じる
-    setIsPayPayOpen(false);
   };
 
   const cartTotal = cartItems?.reduce((total, item) => {
@@ -439,12 +412,7 @@ export default function Cart() {
         isOpen={isPayPayOpen}
         onClose={() => {
           setIsPayPayOpen(false);
-          // 注文と決済が完了している場合は、ピックアップ画面に遷移
-          if (orderCallNumber) {
-            setLocation(`/pickup/${orderCallNumber}`);
-          }
         }}
-        onSuccess={handlePayPaySuccess}
         amount={cartTotal}
         orderId={orderId || undefined}
         callNumber={orderCallNumber as number | undefined}
