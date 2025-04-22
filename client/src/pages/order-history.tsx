@@ -41,6 +41,7 @@ type Order = {
 
 const statusLabels = {
   new: { text: "受付済み", className: "bg-yellow-100 text-yellow-800" },
+  paid: { text: "支払い済み", className: "bg-yellow-100 text-yellow-800" },
   preparing: { text: "準備中", className: "bg-blue-100 text-blue-800" },
   completed: { text: "完了", className: "bg-green-100 text-green-800" }
 };
