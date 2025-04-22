@@ -37,19 +37,11 @@ export function usePayPay() {
 
   // PayPay QRコード生成
   const createPaymentMutation = useMutation({
-    mutationFn: async ({
-                         orderId,
-                         amount,
-                         description
-                       }: {
+    mutationFn: async ({ orderId }: {
       orderId: string;
-      amount: number;
-      description: string
     }) => {
       const response = (await apiRequest('POST', '/api/payments/paypay/create', {
-        orderId,
-        amount,
-        description
+        orderId
       })) as { BODY: PayPayQRCodeResponse };
 
       if (response.BODY.resultInfo.code !== 'SUCCESS') {

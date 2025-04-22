@@ -12,10 +12,9 @@ const router = express.Router();
 // PayPay QRコード生成エンドポイント
 router.post("/api/payments/paypay/create", isAuthenticated, async (req, res) => {
   try {
-    // TODO: クライアントから送られてきた料金を信じるわけにはいかないので、サーバー側で料金を計算する
-    const { orderId, amount, description } = req.body;
+    const { orderId } = req.body;
 
-    if (!orderId || !amount || !description) {
+    if (!orderId) {
       return res.status(400).json({ message: "必須パラメータが不足しています" });
     }
 
@@ -23,8 +22,9 @@ router.post("/api/payments/paypay/create", isAuthenticated, async (req, res) => 
     if (!order) {
       return res.status(404).json({ message: "注文が見つかりません" });
     }
+    const description = `味店焼マン注文 #${order.callNumber}`;
 
-    const response = await createPayment(orderId, amount, description, req.header("Origin"));
+    const response = await createPayment(orderId, order.total, description, req.header("Origin"));
     res.json(response);
   } catch (error) {
     console.error('PayPay QRコード生成エラー:', error);
