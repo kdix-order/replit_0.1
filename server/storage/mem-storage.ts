@@ -8,21 +8,17 @@ import type {
   User
 } from "@shared/schema";
 import { IStorage } from "./istorage";
+import { randomUUID } from "crypto";
 
 export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private products: Map<number, Product>;
-  private cartItems: Map<number, CartItem>;
-  private timeSlots: Map<number, TimeSlot>;
-  private orders: Map<number, Order>;
-  private feedbacks: Map<number, Feedback>;
+  private users: Map<string, User>;
+  private products: Map<string, Product>;
+  private cartItems: Map<string, CartItem>;
+  private timeSlots: Map<string, TimeSlot>;
+  private orders: Map<string, Order>;
+  private feedbacks: Map<string, Feedback>;
   private storeSettings!: StoreSetting;
-  
-  private userIdCounter: number;
-  private productIdCounter: number;
-  private cartItemIdCounter: number;
-  private timeSlotIdCounter: number;
-  private orderIdCounter: number;
+
   private callNumberCounter: number;
   private feedbackIdCounter: number;
 
@@ -33,13 +29,7 @@ export class MemStorage implements IStorage {
     this.timeSlots = new Map();
     this.orders = new Map();
     this.feedbacks = new Map();
-    
-    this.userIdCounter = 1;
-    this.productIdCounter = 1;
-    this.cartItemIdCounter = 1;
-    this.timeSlotIdCounter = 1;
-    this.orderIdCounter = 1;
-    
+
     // 呼出番号カウンターの初期化 - 201から始まる三桁の番号システム
     // マクドナルドのような呼出番号システム（201〜300で循環）
     // 【編集方法】: 別の範囲を使用したい場合は、この値とgetNextCallNumber()メソッドの
@@ -193,7 +183,7 @@ export class MemStorage implements IStorage {
   }
 
   // User methods
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
   }
 
@@ -206,7 +196,7 @@ export class MemStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
+    const id = randomUUID();
     const user = {
       ...insertUser,
       id,
@@ -221,19 +211,19 @@ export class MemStorage implements IStorage {
     return Array.from(this.products.values());
   }
 
-  async getProduct(id: number): Promise<Product | undefined> {
+  async getProduct(id: string): Promise<Product | undefined> {
     return this.products.get(id);
   }
 
   private addProduct(insertProduct: InsertProduct): Product {
-    const id = this.productIdCounter++;
+    const id = randomUUID();
     const product = { ...insertProduct, id };
     this.products.set(id, product);
     return product;
   }
 
   // Cart methods
-  async getCartItems(userId: number): Promise<CartItemWithProduct[]> {
+  async getCartItems(userId: string): Promise<CartItemWithProduct[]> {
     const items = Array.from(this.cartItems.values())
       .filter(item => item.userId === userId);
     
@@ -243,7 +233,7 @@ export class MemStorage implements IStorage {
     }));
   }
 
-  async getCartItem(userId: number, productId: number): Promise<CartItem | undefined> {
+  async getCartItem(userId: string, productId: string): Promise<CartItem | undefined> {
     return Array.from(this.cartItems.values())
       .find(item => item.userId === userId && item.productId === productId);
   }
@@ -272,7 +262,7 @@ export class MemStorage implements IStorage {
       return updatedItem;
     } else {
       // 新規アイテムとして追加
-      const id = this.cartItemIdCounter++;
+      const id = randomUUID();
       const cartItem = { 
         ...insertItem, 
         id,
@@ -285,7 +275,7 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async updateCartItemQuantity(id: number, quantity: number): Promise<CartItem | undefined> {
+  async updateCartItemQuantity(id: string, quantity: number): Promise<CartItem | undefined> {
     const cartItem = this.cartItems.get(id);
     if (!cartItem) return undefined;
     
@@ -294,11 +284,11 @@ export class MemStorage implements IStorage {
     return updatedItem;
   }
 
-  async deleteCartItem(id: number): Promise<void> {
+  async deleteCartItem(id: string): Promise<void> {
     this.cartItems.delete(id);
   }
 
-  async clearCart(userId: number): Promise<void> {
+  async clearCart(userId: string): Promise<void> {
     const itemsToDelete = Array.from(this.cartItems.values())
       .filter(item => item.userId === userId)
       .map(item => item.id);
@@ -314,11 +304,11 @@ export class MemStorage implements IStorage {
     }));
   }
 
-  async getTimeSlot(id: number): Promise<TimeSlot | undefined> {
+  async getTimeSlot(id: string): Promise<TimeSlot | undefined> {
     return this.timeSlots.get(id);
   }
 
-  async updateTimeSlotAvailability(id: number, available: number): Promise<TimeSlot | undefined> {
+  async updateTimeSlotAvailability(id: string, available: number): Promise<TimeSlot | undefined> {
     const timeSlot = this.timeSlots.get(id);
     if (!timeSlot) return undefined;
     
@@ -328,7 +318,7 @@ export class MemStorage implements IStorage {
   }
 
   private addTimeSlot(insertTimeSlot: InsertTimeSlot): TimeSlot {
-    const id = this.timeSlotIdCounter++;
+    const id = randomUUID();
     const timeSlot = { ...insertTimeSlot, id };
     this.timeSlots.set(id, timeSlot);
     return timeSlot;
@@ -336,7 +326,7 @@ export class MemStorage implements IStorage {
 
   // Order methods
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
-    const id = this.orderIdCounter++;
+    const id = randomUUID();
     const order = { 
       ...insertOrder, 
       id,
@@ -363,7 +353,7 @@ export class MemStorage implements IStorage {
     }));
   }
 
-  async getOrdersByUser(userId: number): Promise<OrderWithTimeSlot[]> {
+  async getOrdersByUser(userId: string): Promise<OrderWithTimeSlot[]> {
     const userOrders = Array.from(this.orders.values())
       .filter(order => order.userId === userId);
     
@@ -373,11 +363,11 @@ export class MemStorage implements IStorage {
     }));
   }
 
-  async getOrder(id: number): Promise<Order | undefined> {
+  async getOrder(id: string): Promise<Order | undefined> {
     return this.orders.get(id);
   }
 
-  async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
+  async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
     const order = this.orders.get(id);
     if (!order) return undefined;
     
@@ -410,7 +400,7 @@ export class MemStorage implements IStorage {
 
   // Feedback methods
   async createFeedback(insertFeedback: InsertFeedback): Promise<Feedback> {
-    const id = this.feedbackIdCounter++;
+    const id = randomUUID();
     const feedback = {
       ...insertFeedback,
       id,
@@ -425,12 +415,12 @@ export class MemStorage implements IStorage {
     return feedback;
   }
 
-  async getFeedbackByOrderId(orderId: number): Promise<Feedback | undefined> {
+  async getFeedbackByOrderId(orderId: string): Promise<Feedback | undefined> {
     return Array.from(this.feedbacks.values())
       .find(feedback => feedback.orderId === orderId);
   }
 
-  async getFeedbackByUserId(userId: number): Promise<Feedback[]> {
+  async getFeedbackByUserId(userId: string): Promise<Feedback[]> {
     return Array.from(this.feedbacks.values())
       .filter(feedback => feedback.userId === userId);
   }

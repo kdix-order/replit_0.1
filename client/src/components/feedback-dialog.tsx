@@ -27,7 +27,7 @@ import { useFeedback } from "@/hooks/use-feedback";
 type FeedbackDialogProps = {
   isOpen: boolean;
   onClose: () => void;
-  orderId?: number;
+  orderId?: string;
 };
 
 /**

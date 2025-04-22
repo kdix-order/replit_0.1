@@ -20,7 +20,7 @@ import { toast } from "@/hooks/use-toast";
  * @property comment - テキストによる詳細コメント（オプショナル）
  */
 type FeedbackData = {
-  orderId?: number;
+  orderId?: string;
   sentiment: "positive" | "negative";
   rating?: number;
   comment?: string;
@@ -39,9 +39,9 @@ type FeedbackData = {
  * @property createdAt - フィードバック作成日時
  */
 type Feedback = {
-  id: number;
-  userId: number;
-  orderId: number | null;
+  id: string;
+  userId: string;
+  orderId: string | null;
   sentiment: "positive" | "negative";
   rating: number | null;
   comment: string | null;
@@ -59,7 +59,7 @@ type Feedback = {
 type AdminFeedback = Feedback & {
   userName: string;
   orderDetails?: {
-    id: number;
+    id: string;
     callNumber: number;
     status: "new" | "preparing" | "completed";
     total: number;
@@ -123,7 +123,7 @@ export function useFeedback() {
    * @param orderId - フィードバックを取得したい注文ID
    * @returns 指定した注文IDに関連するフィードバックを取得するクエリ
    */
-  const getOrderFeedbackQuery = (orderId: number) => {
+  const getOrderFeedbackQuery = (orderId: string) => {
     return useQuery<Feedback>({
       queryKey: ["/api/feedback/order", orderId],
       enabled: !!orderId, // 注文IDが存在する場合のみ有効化

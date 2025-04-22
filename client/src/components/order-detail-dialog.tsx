@@ -32,7 +32,7 @@ import { ClipboardCheck, ChefHat, AlertCircle, Ticket } from "lucide-react";
  * @property customizations - カスタマイズオプションの配列（オプション）
  */
 type OrderItem = {
-  id: number;
+  id: string;
   name: string;
   price: number;
   quantity: number;
@@ -54,13 +54,13 @@ type OrderItem = {
  * @property items - 注文アイテムの配列
  */
 type Order = {
-  id: number;
+  id: string;
   userId: number;
   callNumber: number;
   status: "new" | "preparing" | "completed";
   total: number;
   timeSlot: {
-    id: number;
+    id: string;
     time: string;
   };
   createdAt: string;

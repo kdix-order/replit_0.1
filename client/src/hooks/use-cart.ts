@@ -11,7 +11,7 @@ import { apiRequest } from '@/lib/queryClient';
  * 商品データの型定義
  */
 export type Product = {
-  id: number;            // 商品ID
+  id: string;            // 商品ID
   name: string;          // 商品名
   description: string;   // 商品説明
   price: number;         // 価格
@@ -22,9 +22,9 @@ export type Product = {
  * カート内商品アイテムの型定義
  */
 export type CartItem = {
-  id: number;                  // カートアイテムID
-  userId: number;              // ユーザーID
-  productId: number;           // 商品ID
+  id: string;                  // カートアイテムID
+  userId: string;              // ユーザーID
+  productId: string;           // 商品ID
   quantity: number;            // 数量
   size: string;                // サイズ (並、ご飯大など)
   customizations: string[];    // カスタマイズオプション (玉子抜きなど)
@@ -59,7 +59,7 @@ export function useCart() {
       size, 
       customizations 
     }: { 
-      productId: number; 
+      productId: string;
       quantity: number; 
       size: string; 
       customizations: string[];
@@ -85,7 +85,7 @@ export function useCart() {
    * 数量が0以下の場合は商品を削除します
    */
   const updateQuantityMutation = useMutation({
-    mutationFn: async ({ id, quantity }: { id: number; quantity: number }) => {
+    mutationFn: async ({ id, quantity }: { id: string; quantity: number }) => {
       if (quantity <= 0) {
         // 数量が0以下の場合は商品を削除
         return apiRequest("DELETE", `/api/cart/${id}`, undefined);
@@ -111,7 +111,7 @@ export function useCart() {
    * カートから商品を削除するためのミューテーション
    */
   const removeItemMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       return apiRequest("DELETE", `/api/cart/${id}`, undefined);
     },
     onSuccess: () => {
@@ -167,7 +167,7 @@ export function useCart() {
    * @param id - カートアイテムID
    * @param quantity - 新しい数量
    */
-  const updateQuantity = (id: number, quantity: number) => {
+  const updateQuantity = (id: string, quantity: number) => {
     updateQuantityMutation.mutate({ id, quantity });
   };
 
@@ -176,7 +176,7 @@ export function useCart() {
    * 
    * @param id - カートアイテムID
    */
-  const removeItem = (id: number) => {
+  const removeItem = (id: string) => {
     removeItemMutation.mutate(id);
   };
 

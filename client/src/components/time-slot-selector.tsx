@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  * @property isFull - 予約が満枠かどうかのフラグ
  */
 type TimeSlot = {
-  id: number;
+  id: string;
   time: string;
   available: number;
   capacity: number;
@@ -32,8 +32,8 @@ type TimeSlot = {
  * @property selectedId - 現在選択されている時間枠のID（未選択の場合はnull）
  */
 type TimeSlotSelectorProps = {
-  onSelect: (id: number) => void;
-  selectedId: number | null;
+  onSelect: (id: string) => void;
+  selectedId: string | null;
 };
 
 /**

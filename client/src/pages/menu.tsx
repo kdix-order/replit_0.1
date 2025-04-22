@@ -20,28 +20,28 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 /**
  * 注文ボタンコンポーネント
  * 注文の停止状態に応じて表示を切り替えるボタン
- * 
+ *
  * @param props - ボタンのプロパティ
  * @param props.isAcceptingOrders - 注文受付状態
  * @param props.onClick - クリック時のコールバック関数
  * @param props.variant - ボタンのバリアント（"order" または "customize" または "topping"）
  */
-function OrderButton({ isAcceptingOrders, onClick, variant = "order" }: { 
-  isAcceptingOrders: boolean; 
-  onClick: () => void; 
-  variant?: "order" | "customize" | "topping" 
+function OrderButton({ isAcceptingOrders, onClick, variant = "order" }: {
+  isAcceptingOrders: boolean;
+  onClick: () => void;
+  variant?: "order" | "customize" | "topping"
 }) {
   // 注文ボタン（並を注文）の表示設定
   if (variant === "order") {
     return (
-      <Button 
+      <Button
         onClick={onClick}
         className={`inline-flex items-center ${!isAcceptingOrders 
           ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
           : 'bg-[#fff9dc] hover:bg-[#fffcea] text-black hover:shadow-lg'} font-bold shadow-md transition-all border ${!isAcceptingOrders ? 'border-gray-300' : 'border-[#e80113]/30'}`}
         disabled={!isAcceptingOrders}
       >
-        {!isAcceptingOrders 
+        {!isAcceptingOrders
           ? <PauseCircle className="h-4 w-4 mr-2 text-gray-500" />
           : <ShoppingBag className="h-4 w-4 mr-2 text-[#e80113]" />
         }
@@ -49,18 +49,18 @@ function OrderButton({ isAcceptingOrders, onClick, variant = "order" }: {
       </Button>
     );
   }
-  
+
   // トッピング注文ボタンの表示設定
   if (variant === "topping") {
     return (
-      <Button 
+      <Button
         onClick={onClick}
         className={`inline-flex items-center ${!isAcceptingOrders 
           ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
           : 'bg-[#fff9dc] hover:bg-[#fffcea] text-black hover:shadow-lg'} font-bold shadow-md transition-all border ${!isAcceptingOrders ? 'border-gray-300' : 'border-[#e80113]/30'}`}
         disabled={!isAcceptingOrders}
       >
-        {!isAcceptingOrders 
+        {!isAcceptingOrders
           ? <PauseCircle className="h-4 w-4 mr-2 text-gray-500" />
           : <ShoppingBag className="h-4 w-4 mr-2 text-[#e80113]" />
         }
@@ -68,17 +68,17 @@ function OrderButton({ isAcceptingOrders, onClick, variant = "order" }: {
       </Button>
     );
   }
-  
+
   // カスタマイズボタンの表示設定
   return (
-    <Button 
+    <Button
       onClick={onClick}
       className={`inline-flex items-center ${!isAcceptingOrders 
         ? 'bg-gray-300 hover:bg-gray-300 text-gray-600 cursor-not-allowed' 
         : 'bg-[#e80113] hover:bg-[#d10010] text-white hover:shadow-lg'} font-bold shadow-md transition-all`}
       disabled={!isAcceptingOrders}
     >
-      {!isAcceptingOrders 
+      {!isAcceptingOrders
         ? <PauseCircle className="h-4 w-4 mr-2" />
         : <Plus className="h-4 w-4 mr-2" />
       }
@@ -102,12 +102,12 @@ export default function Menu() {
   useEffect(() => {
     // ページ表示時に店舗設定を更新
     refetchStoreSettings();
-    
+
     // 一定間隔で店舗設定を自動更新（60秒ごと）
     const interval = setInterval(() => {
       refetchStoreSettings();
     }, 60000);
-    
+
     return () => clearInterval(interval);
   }, [refetchStoreSettings]);
 
@@ -121,7 +121,7 @@ export default function Menu() {
   /**
    * 即購入用ハンドラー
    * 「並」サイズの商品をカスタマイズなしで素早くカートに追加する機能
-   * 
+   *
    * @param product - カートに追加する商品
    */
   const handleQuickBuy = (product: Product) => {
@@ -160,7 +160,7 @@ export default function Menu() {
   /**
    * 商品カスタマイズダイアログを開く関数
    * サイズやカスタマイズオプションを選択するダイアログを表示します
-   * 
+   *
    * @param product - カスタマイズする商品
    */
   const openProductDialog = (product: Product) => {
@@ -191,23 +191,23 @@ export default function Menu() {
   /**
    * カートに商品を追加する関数
    * カスタマイズダイアログから選択された情報をカートに追加します
-   * 
+   *
    * @param product - カートに追加する商品
    * @param quantity - 数量
    * @param size - サイズ (ガールズサイズ・並・ご飯大・おかず大・大大)
    * @param customizations - カスタマイズオプションの配列 (例: 玉子抜き)
    */
   const handleAddToCart = (
-    product: Product, 
-    quantity: number, 
-    size: Size, 
+    product: Product,
+    quantity: number,
+    size: Size,
     customizations: string[]
   ) => {
     addToCart(product, quantity, size, customizations);
 
     // カスタマイズ情報を表示文字列にする
-    const customizationLabels = customizations.length > 0 
-      ? `（${customizations.map(c => getCustomizationLabel(c)).join('、')}）` 
+    const customizationLabels = customizations.length > 0
+      ? `（${customizations.map(c => getCustomizationLabel(c)).join('、')}）`
       : '';
 
     // ユーザーに通知
@@ -289,8 +289,8 @@ export default function Menu() {
 
 
           {/* 丼 */}
-          <div 
-            id="donburi" 
+          <div
+            id="donburi"
             className="mb-12"
             ref={(el) => (categoryRefs.current["donburi"] = el)}
           >
@@ -299,27 +299,24 @@ export default function Menu() {
               丼
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products?.filter(product => 
-                ((product.id <= 7) || (product.id === 8 || product.id === 9)) &&
-                !product.name.includes('からあげ2個') && 
-                !product.name.includes('うま煮 2個') && 
-                !product.name.includes('キムチ')
-              ).map((product) => (
+                {/*TODO: 丼判定*/}
+                {products?.map((product) => (
                 <Card key={product.id} className="overflow-hidden border-2 border-[#e80113] shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <div className="relative">
-                    <img 
-                      src={product.image} 
-                      alt={product.name} 
+                    <img
+                      src={product.image}
+                      alt={product.name}
                       className="w-full h-48 object-cover"
                     />
                     <div className="absolute top-2 right-2 bg-[#e80113] text-white text-sm font-bold py-1 px-3 rounded-full shadow-md">
                       ¥{product.price}
                     </div>
-                    {(product.id === 8 || product.id === 9) && (
+                    {/* TODO: Productに人気かどうかのフラグを設定 */}
+                    {/* {(product.id === 8 || product.id === 9) && (
                       <div className="absolute top-2 left-2 bg-[#e80113] text-white text-xs font-bold py-1 px-2 rounded-sm shadow">
                         人気
                       </div>
-                    )}
+                    )} */}
                   </div>
                   <CardContent className="p-5 bg-gradient-to-b from-white to-[#fffcf0]">
                     <h3 className="text-xl font-bold text-[#e80113]">{product.name}</h3>
@@ -329,8 +326,8 @@ export default function Menu() {
                         ご飯大 480円　おかず大 540円　大大 600円　ガールズ 380円
                       </div>
                     )}
-                    {(product.name === 'キムカラ丼' || product.name === '鳥塩レモン丼' || 
-                      product.name === 'あまから丼' || product.name === '牛カルビ丼' || 
+                    {(product.name === 'キムカラ丼' || product.name === '鳥塩レモン丼' ||
+                      product.name === 'あまから丼' || product.name === '牛カルビ丼' ||
                       product.name === 'うま煮丼' || product.name === 'から玉子丼') && (
                       <div className="mt-2 text-xs text-gray-600">
                         ご飯大 590円　おかず大 700円　大大 760円　ガールズ 490円
@@ -347,12 +344,12 @@ export default function Menu() {
                       </div>
                     )}
                     <div className="mt-4 flex justify-between">
-                      <OrderButton 
+                      <OrderButton
                         isAcceptingOrders={isAcceptingOrders}
                         onClick={() => handleQuickBuy(product)}
                         variant="order"
                       />
-                      <OrderButton 
+                      <OrderButton
                         isAcceptingOrders={isAcceptingOrders}
                         onClick={() => openProductDialog(product)}
                         variant="customize"
@@ -365,8 +362,8 @@ export default function Menu() {
           </div>
 
           {/* 天津飯 */}
-          <div 
-            id="tenshinhan" 
+          <div
+            id="tenshinhan"
             className="mb-12"
             ref={(el) => (categoryRefs.current["tenshinhan"] = el)}
           >
@@ -375,17 +372,13 @@ export default function Menu() {
               天津飯
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products?.filter(product => 
-                (product.id === 10 || product.id === 11) &&
-                !product.name.includes('からあげ2個') && 
-                !product.name.includes('うま煮 2個') && 
-                !product.name.includes('キムチ')
-              ).map((product) => (
+              {/*TODO: 天津飯判定*/}
+              {products?.map((product) => (
                 <Card key={product.id} className="overflow-hidden border-2 border-[#e80113] shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <div className="relative">
-                    <img 
-                      src={product.image} 
-                      alt={product.name} 
+                    <img
+                      src={product.image}
+                      alt={product.name}
                       className="w-full h-48 object-cover"
                     />
                     <div className="absolute top-2 right-2 bg-[#e80113] text-white text-sm font-bold py-1 px-3 rounded-full shadow-md">
@@ -406,12 +399,12 @@ export default function Menu() {
                       </div>
                     )}
                     <div className="mt-4 flex justify-between">
-                      <OrderButton 
+                      <OrderButton
                         isAcceptingOrders={isAcceptingOrders}
                         onClick={() => handleQuickBuy(product)}
                         variant="order"
                       />
-                      <OrderButton 
+                      <OrderButton
                         isAcceptingOrders={isAcceptingOrders}
                         onClick={() => openProductDialog(product)}
                         variant="customize"
@@ -424,7 +417,7 @@ export default function Menu() {
           </div>
 
           {/* トッピング */}
-          <div 
+          <div
             id="toppings"
             ref={(el) => (categoryRefs.current["toppings"] = el)}
             className="mb-12 bg-white/80 rounded-lg p-6 border-2 border-[#e80113] shadow-md"
@@ -434,9 +427,9 @@ export default function Menu() {
               トッピング
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {products?.filter(product => 
-                product.name.includes('からあげ2個') || 
-                product.name.includes('うま煮 2個') || 
+              {products?.filter(product =>
+                product.name.includes('からあげ2個') ||
+                product.name.includes('うま煮 2個') ||
                 product.name.includes('キムチ')
               ).map((product) => (
                 <div key={product.id} className="flex items-center justify-between bg-gradient-to-r from-white to-[#fffaee] p-4 rounded-lg border-2 border-[#e80113]/40 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#e80113]">
@@ -446,7 +439,7 @@ export default function Menu() {
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="font-bold text-lg text-white bg-[#e80113] px-2 py-1 rounded-md shadow-sm">¥{product.price}</div>
-                    <OrderButton 
+                    <OrderButton
                       isAcceptingOrders={isAcceptingOrders}
                       onClick={() => handleQuickBuy(product)}
                       variant="topping"

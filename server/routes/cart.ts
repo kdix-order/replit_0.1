@@ -23,7 +23,7 @@ router.get("/api/cart", isAuthenticated, async (req, res) => {
 router.post("/api/cart", isAuthenticated, async (req, res) => {
   try {
     const schema = insertCartItemSchema.extend({
-      productId: z.number().min(1),
+      productId: z.string(),
       quantity: z.number().min(1),
       size: z.string().default("並"),
       customizations: z.array(z.string()).default([])
@@ -46,7 +46,7 @@ router.post("/api/cart", isAuthenticated, async (req, res) => {
 
 router.patch("/api/cart/:id", isAuthenticated, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
     const { quantity } = req.body;
 
     if (typeof quantity !== "number" || quantity < 0) {
@@ -72,7 +72,7 @@ router.patch("/api/cart/:id", isAuthenticated, async (req, res) => {
 
 router.delete("/api/cart/:id", isAuthenticated, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
     await storage.deleteCartItem(id);
     res.status(204).send();
   } catch (error) {

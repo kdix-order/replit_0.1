@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
 type User = {
-  id: number;
+  id: string;
   username: string;
   email: string;
   isAdmin: boolean;
