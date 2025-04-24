@@ -71,7 +71,7 @@ export const orders = pgTable("orders", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id").notNull(),
   callNumber: integer("call_number").notNull(),
-  status: text("status").notNull().default("new"), // new, preparing, completed
+  status: text("status").notNull().default("new"), // new, paid, preparing, completed
   total: integer("total").notNull(), // Total price in yen
   timeSlotId: text("time_slot_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),

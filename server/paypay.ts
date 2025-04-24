@@ -26,7 +26,7 @@ import PAYPAYOPA from '@paypayopa/paypayopa-sdk-node';
 import { randomUUID } from 'crypto';
 
 // フロントエンドのURL（リダイレクト先として使用）
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5000';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 /**
  * PayPay SDKを初期化する関数
@@ -67,7 +67,7 @@ export function initializePayPay() {
  * @param orderDescription - 注文の説明
  * @returns PayPay API応答、または認証情報未設定時はモックデータ
  */
-export async function createPayment(orderId: string, amount: number, orderDescription: string) {
+export async function createPayment(orderId: string, amount: number, orderDescription: string, origin: string | undefined) {
   // PayPay SDKインスタンスを取得
   const payPayInstance = initializePayPay();
   
@@ -100,8 +100,9 @@ export async function createPayment(orderId: string, amount: number, orderDescri
         currency: 'JPY'
       },
       orderDescription: orderDescription,
-      redirectUrl: `${FRONTEND_URL}/payment/completed`, // 決済完了後のリダイレクト先
+      redirectUrl: `${origin || FRONTEND_URL}/api/payments/paypay/completed/${orderId}`, // 決済完了後のリダイレクト先
       redirectType: 'WEB_LINK',
+      codeType: "ORDER_QR",
     };
 
     // QRコード作成APIを呼び出し

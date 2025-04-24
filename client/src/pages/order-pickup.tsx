@@ -42,7 +42,7 @@ export default function OrderPickup() {
   } = useQuery<{
     id: string;
     callNumber: number;
-    status: "new" | "preparing" | "completed";
+    status: "new" | "paid" | "preparing" | "completed";
     total: number;
     timeSlot: {
       id: string;

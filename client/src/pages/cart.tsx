@@ -43,12 +43,14 @@ export default function Cart() {
   const { toast } = useToast();
   const { isAuthenticated, login } = useAuth();
   const { removeItem, updateQuantity, clearCart } = useCart();
-  
+
   // 店舗設定を取得
   const { isAcceptingOrders, refetch: refetchStoreSettings } = useStoreSettings();
+  // 受け取り時間の選択画面が開いているか
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  // PayPay決済ダイアログが開いているか
   const [isPayPayOpen, setIsPayPayOpen] = useState(false);
-  
+
   // ページマウント時に店舗設定を更新
   useEffect(() => {
     // カートページに入ったときに店舗設定を最新の状態に更新
@@ -57,7 +59,8 @@ export default function Cart() {
   const [selectedTimeSlotId, setSelectedTimeSlotId] = useState<string | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [orderCallNumber, setOrderCallNumber] = useState<number | null>(null);
-  
+  const [orderId, setOrderId] = useState<string | null>(null);
+
   // カートページに入ったときに最上部にスクロール
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -71,56 +74,20 @@ export default function Cart() {
   const placeOrderMutation = useMutation({
     mutationFn: async (data: { timeSlotId: string; paymentMethod: string }) => {
       console.log("Placing order with data:", data);
-      try {
-        const response = await apiRequest("POST", "/api/orders", data);
-        console.log("Order API response:", response);
-        
-        if (!response.ok) {
-          // レスポンスがJSONでない場合もあるため、try-catchで囲む
-          try {
-            const errorData = await response.json();
-            console.error("Order API error:", errorData);
-            throw new Error(errorData.message || "注文処理中にエラーが発生しました");
-          } catch (jsonError) {
-            console.error("Error parsing JSON:", jsonError);
-            throw new Error(`注文処理中にエラーが発生しました: ${response.statusText}`);
-          }
-        }
-        
-        // レスポンスのパースを試みる
-        try {
-          return await response.json();
-        } catch (jsonError) {
-          console.error("Error parsing success JSON:", jsonError);
-          
-          // デバッグ用の一時的なダミーレスポンス
-          // 本来はサーバー側のレスポンス形式を修正すべき
-          console.warn("Using dummy response for testing");
-          return {
-            id: Math.floor(Math.random() * 1000),
-            callNumber: Math.floor(Math.random() * 900) + 100,
-            status: "new",
-            timeSlotId: data.timeSlotId,
-            total: 1000,
-            paymentMethod: data.paymentMethod
-          };
-        }
-      } catch (error) {
-        console.error("Order submission error:", error);
-        throw error;
-      }
+      const response = await apiRequest("POST", "/api/orders", data);
+      console.log("Order API response:", response);
+      return response;
     },
     onSuccess: (data) => {
       console.log("Order success:", data);
-      clearCart();
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       setIsCheckoutOpen(false);
-      setPaymentProcessing(false);
-      
+      setPaymentProcessing(true);
+
       // 呼出番号を設定
-      setOrderCallNumber(data.callNumber);
-      
+      // setOrderCallNumber(data.callNumber);
+      setOrderId(data.id);
+
       // PayPayダイアログを再度開き、呼出番号を表示
       setIsPayPayOpen(true);
     },
@@ -137,44 +104,13 @@ export default function Cart() {
 
   const handlePlaceOrder = () => {
     if (!selectedTimeSlotId) return;
-    
+
     // PayPayダイアログを開く
-    setIsPayPayOpen(true);
-    setIsCheckoutOpen(false); // 注文確認ダイアログを閉じる
-  };
-  
-  const handlePayPaySuccess = () => {
-    console.log('PayPay payment successful, placing order...');
-    // PayPay決済が成功したら注文処理を実行
-    if (!selectedTimeSlotId) {
-      toast({
-        title: "エラー",
-        description: "時間枠が選択されていません。もう一度お試しください。",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setPaymentProcessing(true);
-    
-    // 成功メッセージを表示
-    toast({
-      title: "決済完了",
-      description: "PayPayでの支払いが完了しました。注文を処理しています。",
-      variant: "default",
+    placeOrderMutation.mutate({
+      timeSlotId: selectedTimeSlotId,
+      paymentMethod: "paypay"
     });
-    
-    // PayPayダイアログを閉じる
-    setIsPayPayOpen(false);
-    
-    // 少し遅延を入れて注文処理を実行
-    setTimeout(() => {
-      // 注文処理を実行
-      placeOrderMutation.mutate({
-        timeSlotId: selectedTimeSlotId,
-        paymentMethod: "paypay"
-      });
-    }, 500);
+    setIsCheckoutOpen(false); // 注文確認ダイアログを閉じる
   };
 
   const cartTotal = cartItems?.reduce((total, item) => {
@@ -191,7 +127,7 @@ export default function Cart() {
       });
       return;
     }
-    
+
     if (!isAuthenticated) {
       toast({
         title: "ログインが必要です",
@@ -213,7 +149,7 @@ export default function Cart() {
             <hr className="w-20 border-[#e80113] border-t-2 mb-3" />
           </div>
         </div>
-        
+
         <div className="flex flex-col items-center justify-center py-12">
           <div className="w-20 h-20 bg-[#fee10b] rounded-full flex items-center justify-center text-black font-bold mb-4">
             読込中
@@ -232,7 +168,7 @@ export default function Cart() {
           <hr className="w-20 border-[#e80113] border-t-2 mb-3" />
         </div>
       </div>
-      
+
       {/* 注文停止中の通知 */}
       {!isAcceptingOrders && (
         <Alert className="mb-6 border-[#e80113] bg-red-50">
@@ -250,7 +186,7 @@ export default function Cart() {
           <CardContent className="p-8 text-center">
             <ShoppingBag className="h-16 w-16 mx-auto text-[#fee10b] mb-4" />
             <p className="text-gray-500 mb-6">カートは空です</p>
-            <Button 
+            <Button
               onClick={() => setLocation("/")}
               className="bg-[#e80113] hover:bg-red-700 text-white px-6"
             >
@@ -270,9 +206,9 @@ export default function Cart() {
                   {/* 商品情報 */}
                   <div className="flex">
                     <div className="flex-shrink-0 h-20 w-20 rounded overflow-hidden bg-gray-100">
-                      <img 
-                        src={item.product.image} 
-                        alt={item.product.name} 
+                      <img
+                        src={item.product.image}
+                        alt={item.product.name}
                         className="h-20 w-20 object-cover"
                       />
                     </div>
@@ -289,11 +225,11 @@ export default function Cart() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* 数量調整と削除ボタン - モバイルでは下に配置 */}
                   <div className="mt-4 sm:mt-0 flex items-center justify-between sm:justify-end">
                     <div className="flex border rounded-md shadow-sm">
-                      <Button 
+                      <Button
                         variant="ghost"
                         onClick={() => {
                           if (item.quantity > 1) {
@@ -307,15 +243,15 @@ export default function Cart() {
                       <div className="px-3 py-2 bg-white border-x border-gray-200">
                         {item.quantity}
                       </div>
-                      <Button 
+                      <Button
                         variant="ghost"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
                       >
                         <Plus />
                       </Button>
                     </div>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       onClick={() => removeItem(item.id)}
                     >
                       <Trash2 />
@@ -324,14 +260,14 @@ export default function Cart() {
                 </li>
               ))}
             </ul>
-            
+
             <div className="px-6 py-8 sm:px-8 bg-gradient-to-b from-gray-50 to-white">
               <div className="flex justify-between text-xl font-bold text-gray-900 border-b-2 border-[#fee10b] pb-4 mb-4">
                 <p>合計金額</p>
                 <p className="text-[#e80113]">¥{cartTotal}</p>
               </div>
               <div className="mt-6">
-                <Button 
+                <Button
                   className={`w-full py-6 text-lg font-bold rounded-xl shadow-lg transform transition-transform duration-300 ${isAcceptingOrders 
                     ? 'bg-[#e80113] hover:bg-red-700 text-white hover:scale-[1.02]' 
                     : 'bg-gray-400 text-white cursor-not-allowed'}`}
@@ -350,7 +286,7 @@ export default function Cart() {
                 </Button>
               </div>
               <div className="mt-6 flex justify-center text-sm">
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => setLocation("/")}
                   className="text-[#e80113] border-[#e80113] hover:bg-red-50 hover:text-[#e80113] hover:border-red-700 px-6"
@@ -372,7 +308,7 @@ export default function Cart() {
               下記の手順で注文を完了します：① 受け取り時間を選択 → ② 注文を確定する → ③ PayPay決済
             </p>
           </DialogHeader>
-          
+
           <div className="overflow-y-auto px-4 sm:px-0 sm:pr-2 flex-grow">
             <div className="mb-4">
               <h3 className="font-bold text-gray-900 text-base mb-2 pb-2 border-b border-gray-100 flex items-center">
@@ -381,7 +317,7 @@ export default function Cart() {
               </h3>
               <TimeSlotSelector onSelect={setSelectedTimeSlotId} selectedId={selectedTimeSlotId} />
             </div>
-            
+
             <div className="mb-4">
               <h3 className="font-bold text-gray-900 text-base mb-2 pb-2 border-b border-gray-100 flex items-center">
                 <span className="inline-flex items-center justify-center bg-gray-700 text-white rounded-full w-6 h-6 mr-2 text-sm font-bold">2</span>
@@ -410,7 +346,7 @@ export default function Cart() {
                 <span className="text-[#e80113]">¥{cartTotal}</span>
               </div>
             </div>
-            
+
             <div className="mt-3 py-3 border-t border-gray-200">
               <h3 className="font-bold text-gray-900 text-base mb-2 flex items-center">
                 <span className="inline-flex items-center justify-center bg-[#fee10b] text-black rounded-full w-6 h-6 mr-2 text-sm font-bold">3</span>
@@ -424,15 +360,15 @@ export default function Cart() {
                 </div>
                 <span className="font-medium">PayPay決済</span>
               </div>
-              
+
               <div className="mt-3 text-sm text-gray-500 italic">
                 「注文を確定する」をクリックするとPayPay決済に進みます
               </div>
             </div>
           </div>
-          
+
           <DialogFooter className="flex items-center justify-between mt-3 pt-3 px-4 sm:px-0 pb-4 border-t border-gray-200">
-            <Button 
+            <Button
               variant="outline"
               onClick={() => setIsCheckoutOpen(false)}
               disabled={paymentProcessing}
@@ -441,7 +377,7 @@ export default function Cart() {
               キャンセル
             </Button>
             <div className="relative">
-              <Button 
+              <Button
                 onClick={handlePlaceOrder}
                 disabled={!selectedTimeSlotId || paymentProcessing}
                 className={`bg-[#e80113] hover:bg-red-700 text-white font-bold px-3 sm:px-5 py-2 rounded-lg shadow-md transform transition-transform duration-300 hover:scale-[1.02] text-sm sm:text-base ${!selectedTimeSlotId ? 'opacity-60' : 'animate-pulse-slow'}`}
@@ -476,13 +412,9 @@ export default function Cart() {
         isOpen={isPayPayOpen}
         onClose={() => {
           setIsPayPayOpen(false);
-          // 注文と決済が完了している場合は、ピックアップ画面に遷移
-          if (orderCallNumber) {
-            setLocation(`/pickup/${orderCallNumber}`);
-          }
         }}
-        onSuccess={handlePayPaySuccess}
         amount={cartTotal}
+        orderId={orderId || undefined}
         callNumber={orderCallNumber as number | undefined}
       />
     </div>

@@ -50,6 +50,7 @@ type Order = {
 
 const statusLabels = {
   new: { text: "受付済み", className: "bg-[#fee10b] text-black", icon: <Clock className="w-4 h-4 mr-1" /> },
+  paid: { text: "支払い済み", className: "bg-[#fee10b] text-black", icon: <Clock className="w-4 h-4 mr-1" /> },
   preparing: { text: "準備中", className: "bg-blue-100 text-blue-800", icon: <BowlSteamSpinner size="xs" className="mr-1 text-blue-800" /> },
   completed: { text: "完了", className: "bg-green-100 text-green-800", icon: null }
 };
@@ -391,7 +392,7 @@ export default function Admin() {
 
   // Mutation for status update
   const updateOrderStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
       try {
         const response = await apiRequest("PATCH", `/api/admin/orders/${id}`, { status });
         if (!response.ok) {
@@ -428,7 +429,7 @@ export default function Admin() {
   });
 
   // Handler for status change
-  const handleStatusChange = (orderId: number, status: string) => {
+  const handleStatusChange = (orderId: string, status: string) => {
     updateOrderStatusMutation.mutate({ id: orderId, status });
   };
 
