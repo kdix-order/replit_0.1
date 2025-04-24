@@ -1,10 +1,10 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // User model
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull().unique(),
@@ -20,7 +20,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 // Product model
 export const products = pgTable("products", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull(),
   price: integer("price").notNull(), // Price in yen
@@ -36,9 +36,9 @@ export const insertProductSchema = createInsertSchema(products).pick({
 
 // Cart item model
 export const cartItems = pgTable("cart_items", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  productId: integer("product_id").notNull(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id").notNull(),
+  productId: text("product_id").notNull(),
   quantity: integer("quantity").notNull().default(1),
   size: text("size").notNull().default("普通"),
   customizations: jsonb("customizations").default([]),
@@ -54,7 +54,7 @@ export const insertCartItemSchema = createInsertSchema(cartItems).pick({
 
 // Time slot model
 export const timeSlots = pgTable("time_slots", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   time: text("time").notNull(), // Format: HH:MM
   capacity: integer("capacity").notNull(),
   available: integer("available").notNull(),
@@ -68,12 +68,12 @@ export const insertTimeSlotSchema = createInsertSchema(timeSlots).pick({
 
 // Order model
 export const orders = pgTable("orders", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id").notNull(),
   callNumber: integer("call_number").notNull(),
   status: text("status").notNull().default("new"), // new, preparing, completed
   total: integer("total").notNull(), // Total price in yen
-  timeSlotId: integer("time_slot_id").notNull(),
+  timeSlotId: text("time_slot_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   items: jsonb("items").notNull(), // Array of order items
 });
@@ -130,9 +130,9 @@ export type AuthResponse = {
 };
 
 export const feedback = pgTable("feedback", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade" }),
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  orderId: text("order_id").references(() => orders.id, { onDelete: "cascade" }),
   sentiment: text("sentiment", { enum: ["positive", "negative"] }).notNull(),
   rating: integer("rating"),
   comment: text("comment"),

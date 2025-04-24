@@ -22,11 +22,11 @@ router.get("/api/admin/orders", isAuthenticated, isAdmin, async (req, res) => {
 router.patch("/api/admin/orders/:id", isAuthenticated, isAdmin, async (req, res) => {
   try {
     // Input validation
-    if (!req.params.id || isNaN(parseInt(req.params.id))) {
+    if (!req.params.id) {
       return res.status(400).json({ message: "Invalid order ID format" });
     }
 
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
 
     // Require status in request body
     if (!req.body || req.body.status === undefined) {

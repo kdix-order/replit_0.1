@@ -35,12 +35,12 @@ export default function OrderConfirmation() {
 
   // 注文情報をAPIから取得
   const { data: order } = useQuery<{
-    id: number;
+    id: string;
     callNumber: number;
     status: "new" | "preparing" | "completed";
     total: number;
     items: Array<{
-      id: number;
+      id: string;
       name: string;
       price: number;
       quantity: number;

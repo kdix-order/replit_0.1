@@ -23,14 +23,14 @@ import { FoodSpinner } from "@/components/ui/food-spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type CartItem = {
-  id: number;
-  userId: number;
-  productId: number;
+  id: string;
+  userId: string;
+  productId: string;
   quantity: number;
   size: string;
   customizations: string[];
   product: {
-    id: number;
+    id: string;
     name: string;
     description: string;
     price: number;
@@ -54,7 +54,7 @@ export default function Cart() {
     // カートページに入ったときに店舗設定を最新の状態に更新
     refetchStoreSettings();
   }, [refetchStoreSettings]);
-  const [selectedTimeSlotId, setSelectedTimeSlotId] = useState<number | null>(null);
+  const [selectedTimeSlotId, setSelectedTimeSlotId] = useState<string | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [orderCallNumber, setOrderCallNumber] = useState<number | null>(null);
   
@@ -69,7 +69,7 @@ export default function Cart() {
   });
 
   const placeOrderMutation = useMutation({
-    mutationFn: async (data: { timeSlotId: number; paymentMethod: string }) => {
+    mutationFn: async (data: { timeSlotId: string; paymentMethod: string }) => {
       console.log("Placing order with data:", data);
       try {
         const response = await apiRequest("POST", "/api/orders", data);

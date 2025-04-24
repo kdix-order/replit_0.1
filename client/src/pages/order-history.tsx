@@ -17,7 +17,7 @@ import { FeedbackDialog } from "@/components/feedback-dialog";
 import { OrderDetailDialog } from "@/components/order-detail-dialog";
 
 type OrderItem = {
-  id: number;
+  id: string;
   name: string;
   price: number;
   quantity: number;
@@ -26,13 +26,13 @@ type OrderItem = {
 };
 
 type Order = {
-  id: number;
+  id: string;
   userId: number;
   callNumber: number;
   status: "new" | "preparing" | "completed";
   total: number;
   timeSlot: {
-    id: number;
+    id: string;
     time: string;
   };
   createdAt: string;
@@ -54,7 +54,7 @@ export default function OrderHistory() {
   const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState<number | undefined>(undefined);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | undefined>(undefined);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 

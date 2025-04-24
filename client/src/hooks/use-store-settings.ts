@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 
 export type StoreSettings = {
-  id: number;
+  id: string;
   acceptingOrders: boolean;
   updatedAt: string;
 };

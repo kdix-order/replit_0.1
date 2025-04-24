@@ -18,7 +18,7 @@ router.post("/api/feedback", isAuthenticated, async (req, res) => {
 
     // Validate input
     const schema = insertFeedbackSchema.extend({
-      orderId: z.number().optional(),
+      orderId: z.string().optional(),
       sentiment: z.enum(["positive", "negative"]),
       rating: z.number().min(1).max(5).optional(),
       comment: z.string().optional(),
@@ -73,7 +73,7 @@ router.get("/api/feedback", isAuthenticated, async (req, res) => {
 // Get feedback for a specific order
 router.get("/api/feedback/order/:id", isAuthenticated, async (req, res) => {
   try {
-    const orderId = parseInt(req.params.id);
+    const orderId = req.params.id;
 
     // Check if order exists
     const order = await storage.getOrder(orderId);

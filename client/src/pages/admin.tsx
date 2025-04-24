@@ -26,7 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { OrderStatusTracker } from "@/components/order-status-tracker";
 
 type OrderItem = {
-  id: number;
+  id: string;
   name: string;
   price: number;
   quantity: number;
@@ -35,13 +35,13 @@ type OrderItem = {
 };
 
 type Order = {
-  id: number;
-  userId: number;
+  id: string;
+  userId: string;
   callNumber: number;
   status: "new" | "preparing" | "completed";
   total: number;
   timeSlot: {
-    id: number;
+    id: string;
     time: string;
   };
   createdAt: string;
@@ -67,7 +67,7 @@ function OrderItem({
   getCustomizationLabel
 }: { 
   order: Order; 
-  handleStatusChange: (orderId: number, status: string) => void;
+  handleStatusChange: (orderId: string, status: string) => void;
   updateOrderStatusMutation: any;
   setDetailOrder: (order: Order | null) => void;
   statusLabels: any;

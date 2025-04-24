@@ -14,7 +14,7 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
     const { timeSlotId, paymentMethod } = req.body;
 
     // Validate input
-    if (!timeSlotId || typeof timeSlotId !== "number") {
+    if (!timeSlotId) {
       return res.status(400).json({ message: "Invalid time slot" });
     }
 

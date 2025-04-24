@@ -40,16 +40,16 @@ export default function OrderPickup() {
     isLoading,
     error
   } = useQuery<{
-    id: number;
+    id: string;
     callNumber: number;
     status: "new" | "preparing" | "completed";
     total: number;
     timeSlot: {
-      id: number;
+      id: string;
       time: string;
     };
     items: Array<{
-      id: number;
+      id: string;
       name: string;
       price: number;
       quantity: number;
