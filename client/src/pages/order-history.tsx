@@ -199,7 +199,7 @@ export default function OrderHistory() {
                       <AnimatedButton
                         onClick={(e) => {
                           e.stopPropagation();
-                          setLocation(`/pickup/${order.callNumber}`);
+                          setLocation(`/pickup/${order.id}`);
                         }}
                         className="mr-2 px-2 py-1 bg-[#e80113] hover:bg-red-600 text-white rounded-md"
                         animationType="scale"

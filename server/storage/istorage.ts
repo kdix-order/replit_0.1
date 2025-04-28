@@ -38,7 +38,6 @@ export interface IStorage {
     getOrdersByUser(userId: string): Promise<OrderWithTimeSlot[]>;
     getOrder(id: string): Promise<Order | undefined>;
     updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
-    getNextCallNumber(): Promise<number>;
 
     // Feedback methods
     createFeedback(feedback: InsertFeedback): Promise<Feedback>;

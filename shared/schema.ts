@@ -2,6 +2,8 @@ import { pgTable, text, serial, integer, boolean, timestamp, jsonb, uuid } from 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// TODO: onDeleteの動作が適当なので、監査などの都合で残しておきたい場合は他の動作を指定する
+
 // User model
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -37,8 +39,8 @@ export const insertProductSchema = createInsertSchema(products).pick({
 // Cart item model
 export const cartItems = pgTable("cart_items", {
   id: uuid("id").defaultRandom().primaryKey(),
-  userId: text("user_id").notNull(),
-  productId: text("product_id").notNull(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   quantity: integer("quantity").notNull().default(1),
   size: text("size").notNull().default("普通"),
   customizations: jsonb("customizations").default([]),
@@ -69,18 +71,17 @@ export const insertTimeSlotSchema = createInsertSchema(timeSlots).pick({
 // Order model
 export const orders = pgTable("orders", {
   id: uuid("id").defaultRandom().primaryKey(),
-  userId: text("user_id").notNull(),
-  callNumber: integer("call_number").notNull(),
+  userId: uuid("user_id").notNull(),
+  callNumber: serial("call_number").notNull(),
   status: text("status").notNull().default("new"), // new, paid, preparing, completed
   total: integer("total").notNull(), // Total price in yen
-  timeSlotId: text("time_slot_id").notNull(),
+  timeSlotId: uuid("time_slot_id").notNull().references(() => timeSlots.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow(),
   items: jsonb("items").notNull(), // Array of order items
 });
 
 export const insertOrderSchema = createInsertSchema(orders).pick({
   userId: true,
-  callNumber: true,
   status: true,
   total: true,
   timeSlotId: true,
@@ -131,8 +132,8 @@ export type AuthResponse = {
 
 export const feedback = pgTable("feedback", {
   id: uuid("id").defaultRandom().primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  orderId: text("order_id").references(() => orders.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  orderId: uuid("order_id").references(() => orders.id, { onDelete: "cascade" }),
   sentiment: text("sentiment", { enum: ["positive", "negative"] }).notNull(),
   rating: integer("rating"),
   comment: text("comment"),

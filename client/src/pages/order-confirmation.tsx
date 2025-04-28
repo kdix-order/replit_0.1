@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, ClockIcon, ArrowRight, Home, History, Ticket } from "lucide-react";
+import { CheckCircle, ClockIcon, ArrowRight, Home, History, Ticket, Loader2 } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -19,10 +19,9 @@ import { OrderStatusTracker } from "@/components/order-status-tracker";
  * ユーザーは注文状態の確認やQRコード表示ページへの遷移が可能です
  */
 export default function OrderConfirmation() {
-  const params = useParams<{ callNumber: string }>();
+  const {id} = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
-  const callNumber = params.callNumber;
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // 現在時刻を1分ごとに更新
@@ -48,15 +47,17 @@ export default function OrderConfirmation() {
       customizations?: string[];
     }>;
   }>({
-    queryKey: [`/api/orders/${callNumber}`],
-    enabled: !!callNumber && isAuthenticated,
+    queryKey: [`/api/orders/${id}`],
+    enabled: !!id && isAuthenticated,
   });
+
+  // TODO: 読み込み中のUIを表示
 
   // 15分後を受け取り目安時間とする
   const estimatedPickupTime = new Date(currentTime.getTime() + 15 * 60000);
   const formattedPickupTime = `${estimatedPickupTime.getHours()}:${String(estimatedPickupTime.getMinutes()).padStart(2, '0')}`;
 
-  if (!callNumber) {
+  if (!id) {
     setLocation("/");
     return null;
   }
@@ -73,7 +74,11 @@ export default function OrderConfirmation() {
       {/* 呼び出し番号 */}
       <div className="bg-white p-6 text-center">
         <h3 className="text-lg font-medium text-gray-500 mb-1">お呼び出し番号</h3>
-        <div className="text-6xl font-bold text-[#e80113] py-4">{callNumber}</div>
+        {order ? (
+          <div className="text-6xl font-bold text-[#e80113] py-4">{order.callNumber}</div>
+        ):(
+          <Loader2 className="animate-spin h-16 w-16 mx-auto mb-4" />
+        )}
         <p className="text-sm text-gray-600">この番号が呼ばれたらカウンターでお受け取りください</p>
         
         {/* 注文ステータストラッカー */}
@@ -100,7 +105,7 @@ export default function OrderConfirmation() {
           {/* 受け取り用QRコード表示リンク */}
           <Button
             className="w-full mt-3 bg-[#e80113] hover:bg-[#d10010] text-white"
-            onClick={() => setLocation(`/pickup/${callNumber}`)}
+            onClick={() => setLocation(`/pickup/${order?.id || ''}`)}
           >
             <Ticket className="mr-2 h-4 w-4" />
             受け取り用QRコードを表示する

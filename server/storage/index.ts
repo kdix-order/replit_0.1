@@ -1,1 +1,1 @@
-export * from './mem-storage';
+export * from './pg-storage';

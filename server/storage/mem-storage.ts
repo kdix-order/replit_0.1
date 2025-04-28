@@ -331,7 +331,8 @@ export class MemStorage implements IStorage {
       ...insertOrder, 
       id,
       status: insertOrder.status || 'new',
-      createdAt: new Date()
+      createdAt: new Date(),
+      callNumber: await this.getNextCallNumber()
     };
     this.orders.set(id, order);
     
@@ -391,9 +392,9 @@ export class MemStorage implements IStorage {
    */
   async getNextCallNumber(): Promise<number> {
     // 呼出番号の最大値（300）を超えたら最小値（201）にリセット
-    if (this.callNumberCounter > 300) {
-      this.callNumberCounter = 201; // 呼出番号の最小値
-    }
+    // if (this.callNumberCounter > 300) {
+    //   this.callNumberCounter = 201; // 呼出番号の最小値
+    // }
     // 現在の番号を返し、カウンターをインクリメント
     return this.callNumberCounter++;
   }

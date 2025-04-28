@@ -238,7 +238,7 @@ export function OrderDetailDialog({ isOpen, onClose, order }: OrderDetailDialogP
               className="w-full bg-[#e80113] hover:bg-[#d10010] text-white"
               onClick={() => {
                 onClose();
-                setLocation(`/pickup/${order.callNumber}`);
+                setLocation(`/pickup/${order.id}`);
               }}
             >
               <Ticket className="h-4 w-4 mr-2" />
