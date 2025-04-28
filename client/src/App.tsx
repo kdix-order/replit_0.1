@@ -21,8 +21,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Menu} />
       <Route path="/cart" component={Cart} />
-      <Route path="/confirmation/:callNumber" component={OrderConfirmation} />
-      <Route path="/pickup/:callNumber" component={OrderPickup} />
+      <Route path="/confirmation/:id" component={OrderConfirmation} />
+      <Route path="/pickup/:id" component={OrderPickup} />
       <Route path="/history" component={OrderHistory} />
       <Route path="/admin" component={Admin} />
       <Route path="/terms" component={Terms} />

@@ -45,13 +45,9 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
       return sum + (item.quantity * item.product.price);
     }, 0);
 
-    // Get next call number
-    const callNumber = await storage.getNextCallNumber();
-
     // Create order
     const order = await storage.createOrder({
       userId: req.user.id,
-      callNumber,
       status: "new",
       total,
       timeSlotId,
@@ -65,10 +61,11 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
       }))
     });
 
-    console.log(`Order confirmed: Call number ${callNumber}`);
+    console.log(`Order confirmed: Call number ${order.callNumber}`);
 
     res.status(201).json({
       ...order,
+      callNumber: (order.callNumber % 99) + 201,
       timeSlot
     });
   } catch (error) {
@@ -79,25 +76,21 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
 router.get("/api/orders", isAuthenticated, async (req, res) => {
   try {
     const orders = await storage.getOrdersByUser(req.user.id);
-    res.json(orders);
+    res.json(orders.map(o => ({ ...o, callNumber: (o.callNumber % 99) + 201 })));
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// 特定の注文を呼び出し番号で取得するAPI
-router.get("/api/orders/:callNumber", isAuthenticated, async (req, res) => {
+// 特定の注文をIdで取得するAPI
+// callNumberは表示用の番号で、実際のDBのIDはUUIDなので、
+router.get("/api/orders/:id", isAuthenticated, async (req, res) => {
   try {
-    const { callNumber } = req.params;
-    const callNumberInt = parseInt(callNumber, 10);
+    const { id } = req.params;
 
-    if (isNaN(callNumberInt)) {
-      return res.status(400).json({ message: "Invalid call number" });
-    }
-
-    // 全注文を取得して呼び出し番号でフィルタリング
+    // 全注文を取得してIdでフィルタリング
     const userOrders = await storage.getOrdersByUser(req.user.id);
-    const order = userOrders.find(o => o.callNumber === callNumberInt);
+    const order = userOrders.find(o => o.id === id);
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -107,7 +100,11 @@ router.get("/api/orders/:callNumber", isAuthenticated, async (req, res) => {
     const timeSlot = await storage.getTimeSlot(order.timeSlotId);
 
     // レスポンスとしてタイムスロット情報も含める
-    res.json({ ...order, timeSlot });
+    res.json({
+      ...order,
+      callNumber: (order.callNumber % 99) + 201,
+      timeSlot
+    });
   } catch (error) {
     console.error("Order fetch error:", error);
     res.status(500).json({

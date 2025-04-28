@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, ClockIcon, ArrowRight, Home, History, Ticket, AlertCircle } from "lucide-react";
+import { CheckCircle, ClockIcon, ArrowRight, Home, History, Ticket, AlertCircle, Loader2 } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -20,10 +20,10 @@ import { OrderStatusTracker } from "@/components/order-status-tracker";
  * 注文状況のリアルタイム表示とマクドナルドスタイルのインターフェースを実装しています
  */
 export default function OrderPickup() {
-  const params = useParams<{ callNumber: string }>();
+  const params = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
-  const callNumber = params.callNumber;
+  const id = params.id;
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // 現在時刻を1分ごとに更新
@@ -35,8 +35,8 @@ export default function OrderPickup() {
   }, []);
 
   // 注文情報をAPIから取得
-  const { 
-    data: order, 
+  const {
+    data: order,
     isLoading,
     error
   } = useQuery<{
@@ -57,8 +57,8 @@ export default function OrderPickup() {
       customizations?: string[];
     }>;
   }>({
-    queryKey: [`/api/orders/${callNumber}`],
-    enabled: !!callNumber && isAuthenticated,
+    queryKey: [`/api/orders/${id}`],
+    enabled: !!id && isAuthenticated,
     retry: 1,
     staleTime: 30000, // 30秒
   });
@@ -67,7 +67,7 @@ export default function OrderPickup() {
   const estimatedPickupTime = new Date(currentTime.getTime() + 15 * 60000);
   const formattedPickupTime = `${estimatedPickupTime.getHours()}:${String(estimatedPickupTime.getMinutes()).padStart(2, '0')}`;
 
-  if (!callNumber) {
+  if (!id) {
     setLocation("/");
     return null;
   }
@@ -81,7 +81,7 @@ export default function OrderPickup() {
         </div>
         <h2 className="text-xl font-bold mb-3">ログインが必要です</h2>
         <p className="text-gray-600 mb-6">注文情報を表示するにはログインしてください</p>
-        <Button 
+        <Button
           onClick={() => setLocation("/")}
           className="bg-[#e80113] hover:bg-red-700 text-white"
         >
@@ -101,15 +101,15 @@ export default function OrderPickup() {
         </div>
         <h2 className="text-xl font-bold mb-3">注文情報を読み込めませんでした</h2>
         <p className="text-gray-600 mb-6">正しい注文番号にアクセスしているか確認してください</p>
-        <Button 
+        <Button
           onClick={() => setLocation("/history")}
           className="bg-[#e80113] hover:bg-red-700 text-white mb-2"
         >
           <History className="mr-2 h-4 w-4" />
           注文履歴を確認する
         </Button>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={() => setLocation("/")}
         >
           <Home className="mr-2 h-4 w-4" />
@@ -136,7 +136,13 @@ export default function OrderPickup() {
       {/* 呼び出し番号 - マクドナルドスタイルの大きな表示 */}
       <div className="bg-[#e80113] px-4 py-8 text-center">
         <h3 className="text-lg font-medium text-white mb-1">お呼び出し番号</h3>
-        <div className="text-[100px] leading-none font-bold text-white py-6">{callNumber}</div>
+        {order ? (
+          <div className="text-[100px] leading-none font-bold text-white py-6">
+            {order.callNumber}
+          </div>
+        ) : (
+          <Loader2 className="animate-spin h-16 w-16 mx-auto mb-4" />
+        )}
         <p className="text-sm text-white/80">この番号が呼ばれたらカウンターでお受け取りください</p>
       </div>
 
@@ -203,7 +209,7 @@ export default function OrderPickup() {
         </CardContent>
 
         <CardFooter className="bg-gray-50 p-4 flex flex-col gap-2">
-          <Button 
+          <Button
             className="w-full bg-[#e80113] hover:bg-red-700 text-white"
             onClick={() => setLocation("/history")}
           >
@@ -211,7 +217,7 @@ export default function OrderPickup() {
             注文履歴を確認する
           </Button>
 
-          <Button 
+          <Button
             variant="outline"
             className="w-full border-gray-300"
             onClick={() => setLocation("/")}
