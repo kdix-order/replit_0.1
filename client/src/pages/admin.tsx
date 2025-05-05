@@ -38,7 +38,7 @@ type Order = {
   id: string;
   userId: string;
   callNumber: number;
-  status: "new" | "preparing" | "completed" | "refunded";
+  status: "new" | "preparing" | "completed";
   total: number;
   timeSlot: {
     id: string;
@@ -52,8 +52,7 @@ const statusLabels = {
   new: { text: "受付済み", className: "bg-[#fee10b] text-black", icon: <Clock className="w-4 h-4 mr-1" /> },
   paid: { text: "支払い済み", className: "bg-[#fee10b] text-black", icon: <Clock className="w-4 h-4 mr-1" /> },
   preparing: { text: "準備中", className: "bg-blue-100 text-blue-800", icon: <BowlSteamSpinner size="xs" className="mr-1 text-blue-800" /> },
-  completed: { text: "完了", className: "bg-green-100 text-green-800", icon: null },
-  refunded: { text: "返金済み", className: "bg-red-100 text-red-800", icon: null }
+  completed: { text: "完了", className: "bg-green-100 text-green-800", icon: null }
 };
 
 /**
@@ -147,35 +146,6 @@ function OrderItem({
           <div className="mb-3 bg-gray-50 p-2 rounded flex flex-wrap gap-2 md:gap-4 text-sm">
             <div className="flex items-center">
               <span className="text-gray-500 mr-1">注文ID:</span>
-
-  // Mutation for refund
-  const refundOrderMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      const response = await apiRequest("POST", `/api/admin/orders/${orderId}/refund`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "返金処理に失敗しました");
-      }
-      return response.json();
-    },
-    onSuccess: (_, orderId) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
-      const order = orders?.find(o => o.id === orderId);
-      toast({
-        title: "返金処理が完了しました",
-        description: `呼出番号 ${order?.callNumber} の注文の返金処理が完了しました。`,
-      });
-    },
-    onError: (error: any) => {
-      console.error("Refund error:", error);
-      toast({
-        title: "エラーが発生しました",
-        description: error.message || "返金処理に失敗しました。もう一度お試しください。",
-        variant: "destructive",
-      });
-    },
-  });
-
               <span className="font-medium">#{order.id}</span>
             </div>
             <div className="flex items-center">
@@ -228,32 +198,14 @@ function OrderItem({
           
           {/* 操作ボタン */}
           <div className="flex justify-between items-center">
-            <div className="flex gap-2">
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={() => setDetailOrder(order)}
-                className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                詳細ダイアログを開く
-              </Button>
-              
-              {order.status === 'completed' && (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => {
-                    if (window.confirm(`呼出番号 ${order.callNumber} の注文を返金します。よろしいですか？\n返金額: ¥${order.total}`)) {
-                      refundOrderMutation.mutate(order.id);
-                    }
-                  }}
-                  disabled={refundOrderMutation.isPending}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  返金
-                </Button>
-              )}
-            </div>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => setDetailOrder(order)}
+              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              詳細ダイアログを開く
+            </Button>
             
             <Select
               value={order.status}

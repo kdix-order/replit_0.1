@@ -6,7 +6,6 @@ import express, { type Request, type Response } from "express";
 import { isAdmin, isAuthenticated } from "../middlewares/auth";
 import { storage } from "../storage";
 import { isAdminUser } from "../utils/auth";
-import { refundPayment } from "../paypay";
 
 const router = express.Router();
 
@@ -170,30 +169,3 @@ router.get('/api/admin/feedback', isAuthenticated, async (req: Request, res: Res
 });
 
 export default router;
-
-// 返金処理エンドポイント
-router.post("/api/admin/orders/:id/refund", isAuthenticated, isAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // 注文を取得
-    const order = await storage.getOrder(id);
-    if (!order) {
-      return res.status(404).json({ message: "注文が見つかりません" });
-    }
-
-    // PayPayで返金処理を実行
-    await refundPayment(id, order.total);
-    
-    // 注文ステータスを更新
-    await storage.updateOrderStatus(id, "refunded");
-
-    res.json({ message: "返金処理が完了しました" });
-  } catch (error) {
-    console.error("Refund error:", error);
-    res.status(500).json({
-      message: "返金処理中にエラーが発生しました",
-      error: error instanceof Error ? error.message : "Unknown error"
-    });
-  }
-});
