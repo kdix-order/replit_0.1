@@ -66,7 +66,9 @@ function OrderItem({
   updateOrderStatusMutation, 
   setDetailOrder, 
   statusLabels,
-  getCustomizationLabel
+  getCustomizationLabel,
+  refundOrderMutation,
+  handleRefund
 }: { 
   order: Order; 
   handleStatusChange: (orderId: string, status: string) => void;
@@ -74,6 +76,8 @@ function OrderItem({
   setDetailOrder: (order: Order | null) => void;
   statusLabels: any;
   getCustomizationLabel: (customization: string) => string;
+  refundOrderMutation: any;
+  handleRefund: (orderId: string) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   
@@ -823,6 +827,8 @@ export default function Admin() {
                       setDetailOrder={setDetailOrder}
                       statusLabels={statusLabels}
                       getCustomizationLabel={getCustomizationLabel}
+                      refundOrderMutation={refundOrderMutation}
+                      handleRefund={handleRefund}
                     />
                   ))}
                 </div>
