@@ -150,14 +150,15 @@ function OrderItem({
 
   // Mutation for refund
   const refundOrderMutation = useMutation({
-    mutationFn: async (orderId: string) => {
-      const response = await apiRequest("POST", `/api/admin/orders/${orderId}/refund`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "返金処理に失敗しました");
-      }
-      return response.json();
-    },
+    mutationFn: (orderId: string) => 
+      apiRequest("POST", `/api/admin/orders/${orderId}/refund`)
+        .then(async (response) => {
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "返金処理に失敗しました");
+          }
+          return response.json();
+        }),
     onSuccess: (_, orderId) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
       const order = orders?.find(o => o.id === orderId);
