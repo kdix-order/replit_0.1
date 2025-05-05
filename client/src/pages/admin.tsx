@@ -38,7 +38,7 @@ type Order = {
   id: string;
   userId: string;
   callNumber: number;
-  status: "new" | "preparing" | "completed";
+  status: "new" | "preparing" | "completed" | "refunded";
   total: number;
   timeSlot: {
     id: string;
@@ -52,7 +52,8 @@ const statusLabels = {
   new: { text: "受付済み", className: "bg-[#fee10b] text-black", icon: <Clock className="w-4 h-4 mr-1" /> },
   paid: { text: "支払い済み", className: "bg-[#fee10b] text-black", icon: <Clock className="w-4 h-4 mr-1" /> },
   preparing: { text: "準備中", className: "bg-blue-100 text-blue-800", icon: <BowlSteamSpinner size="xs" className="mr-1 text-blue-800" /> },
-  completed: { text: "完了", className: "bg-green-100 text-green-800", icon: null }
+  completed: { text: "完了", className: "bg-green-100 text-green-800", icon: null },
+  refunded: { text: "返金済み", className: "bg-red-100 text-red-800", icon: <RefreshCw className="w-4 h-4 mr-1 text-red-800" /> }
 };
 
 /**
@@ -198,23 +199,40 @@ function OrderItem({
           
           {/* 操作ボタン */}
           <div className="flex justify-between items-center">
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => setDetailOrder(order)}
-              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              詳細ダイアログを開く
-            </Button>
+            <div className="flex space-x-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setDetailOrder(order)}
+                className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                詳細ダイアログを開く
+              </Button>
+              
+              {/* 返金ボタン - 完了していない注文のみ表示 */}
+              {order.status !== 'completed' && order.status !== 'refunded' && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleRefund(order.id)}
+                  className="bg-white border-red-300 text-red-700 hover:bg-red-50"
+                  disabled={refundOrderMutation.isPending}
+                >
+                  <RefreshCw className="w-4 h-4 mr-1 inline" /> 
+                  {refundOrderMutation.isPending ? '処理中...' : '返金する'}
+                </Button>
+              )}
+            </div>
             
             <Select
               value={order.status}
               onValueChange={(value) => handleStatusChange(order.id, value)}
-              disabled={updateOrderStatusMutation.isPending}
+              disabled={updateOrderStatusMutation.isPending || order.status === 'refunded'}
             >
               <SelectTrigger className={`w-36 h-9 
                 ${order.status === 'new' ? 'bg-[#fee10b] text-black border-[#e80113]' : 
                 order.status === 'preparing' ? 'bg-blue-100 text-blue-800 border-blue-300' : 
+                order.status === 'refunded' ? 'bg-red-100 text-red-800 border-red-300' :
                 'bg-green-100 text-green-800 border-green-300'}`}
               >
                 <SelectValue />
@@ -454,15 +472,58 @@ export default function Admin() {
     return result;
   }, [orders, filterStatus, sortNewest]);
 
+  // 返金処理用のミューテーション
+  const refundOrderMutation = useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      try {
+        const response = await apiRequest("POST", `/api/admin/orders/${id}/refund`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "返金処理に失敗しました");
+        }
+        return response;
+      } catch (error) {
+        throw error;
+      }
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
+      
+      const order = orders?.find(o => o.id === variables.id);
+      const callNumber = order ? order.callNumber : variables.id;
+      
+      // 成功通知
+      toast({
+        title: `返金処理が完了しました`,
+        description: `呼出番号 ${callNumber} の注文が返金処理されました。`,
+      });
+    },
+    onError: (error: any) => {
+      console.error("Refund process error:", error);
+      toast({
+        title: "エラーが発生しました",
+        description: error.message || "返金処理に失敗しました。もう一度お試しください。",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // 返金処理の実行
+  const handleRefund = (orderId: string) => {
+    if (window.confirm("この注文を返金処理しますか？この操作は取り消せません。")) {
+      refundOrderMutation.mutate({ id: orderId });
+    }
+  };
+
   // Count orders by status
   const orderCounts = useMemo(() => {
-    if (!orders) return { new: 0, preparing: 0, completed: 0, total: 0 };
+    if (!orders) return { new: 0, preparing: 0, completed: 0, refunded: 0, total: 0 };
     
-    return orders.reduce((acc: { new: number, preparing: number, completed: number, total: number }, order: Order) => {
+    return orders.reduce((acc: { new: number, preparing: number, completed: number, refunded: number, total: number }, order: Order) => {
       acc[order.status as keyof typeof acc]++;
       acc.total++;
       return acc;
-    }, { new: 0, preparing: 0, completed: 0, total: 0 });
+    }, { new: 0, preparing: 0, completed: 0, refunded: 0, total: 0 });
   }, [orders]);
 
   // Redirect if not admin
@@ -718,6 +779,12 @@ export default function Admin() {
                           完了 ({orderCounts.completed})
                         </div>
                       </SelectItem>
+                      <SelectItem value="refunded">
+                        <div className="flex items-center">
+                          <RefreshCw className="w-4 h-4 mr-1 text-red-600" />
+                          返金済み ({orderCounts.refunded})
+                        </div>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   
@@ -849,7 +916,34 @@ export default function Admin() {
                             完了
                           </Label>
                         </div>
+                        
+                        {detailOrder.status === 'refunded' && (
+                          <div className="flex items-center space-x-2 p-2 rounded bg-red-50 border border-red-200">
+                            <RadioGroupItem value="refunded" id={`detail-refunded-${detailOrder.id}`} checked disabled />
+                            <Label htmlFor={`detail-refunded-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                              <RefreshCw className="w-4 h-4 mr-2 text-red-600" />
+                              返金済み
+                            </Label>
+                          </div>
+                        )}
                       </RadioGroup>
+                      
+                      {/* 返金ボタン */}
+                      {detailOrder.status !== 'completed' && detailOrder.status !== 'refunded' && (
+                        <div className="mt-4">
+                          <Button 
+                            onClick={() => handleRefund(detailOrder.id)}
+                            className="w-full bg-red-500 hover:bg-red-600 text-white"
+                            disabled={refundOrderMutation.isPending}
+                          >
+                            <RefreshCw className="w-4 h-4 mr-2" /> 
+                            {refundOrderMutation.isPending ? '返金処理中...' : 'この注文を返金する'}
+                          </Button>
+                          <p className="text-xs text-gray-500 mt-2">
+                            注意: 返金処理は取り消せません。完了していない注文のみ返金できます。
+                          </p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>

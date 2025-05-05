@@ -135,6 +135,53 @@ router.get('/api/admin/feedback', isAuthenticated, async (req: Request, res: Res
         let orderDetails = null;
         let userName = 'Unknown user';
 
+// 返金処理エンドポイント
+router.post("/api/admin/orders/:id/refund", isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    
+    // 注文の存在確認
+    const order = await storage.getOrder(id);
+    if (!order) {
+      return res.status(404).json({ message: "注文が見つかりません" });
+    }
+    
+    // すでに完了した注文は返金できない
+    if (order.status === "completed") {
+      return res.status(400).json({ message: "完了済みの注文は返金できません" });
+    }
+    
+    // 返金処理（実際のPayPay APIとの連携は省略）
+    // 本番環境では実際にPayPay APIを使用して返金処理を行うべき
+    
+    // 注文ステータスを「返金済み」に更新
+    const updatedOrder = await storage.updateOrderStatus(id, "refunded");
+    
+    if (!updatedOrder) {
+      return res.status(500).json({ message: "返金処理に失敗しました" });
+    }
+    
+    // タイムスロット情報を取得
+    const timeSlot = await storage.getTimeSlot(updatedOrder.timeSlotId);
+    
+    console.log(`Order ${id} has been refunded`);
+    
+    // 返金処理成功
+    res.json({ 
+      ...updatedOrder, 
+      timeSlot,
+      message: "返金処理が完了しました" 
+    });
+  } catch (error) {
+    console.error("Refund process error:", error);
+    res.status(500).json({
+      message: "返金処理中にエラーが発生しました",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+
         if (feedback.orderId) {
           const order = await storage.getOrder(feedback.orderId);
           if (order) {
