@@ -146,9 +146,12 @@ router.post("/api/admin/orders/:id/refund", isAuthenticated, isAdmin, async (req
       return res.status(404).json({ message: "注文が見つかりません" });
     }
     
-    // すでに完了した注文は返金できない
+    // すでに完了した注文や返金済みの注文は返金できない
     if (order.status === "completed") {
       return res.status(400).json({ message: "完了済みの注文は返金できません" });
+    }
+    if (order.status === "refunded") {
+      return res.status(400).json({ message: "この注文はすでに返金済みです" });
     }
     
     // 返金処理（実際のPayPay APIとの連携は省略）
