@@ -70,12 +70,12 @@ export function initializePayPay() {
 export async function createPayment(orderId: string, amount: number, orderDescription: string, origin: string | undefined) {
   // PayPay SDKインスタンスを取得
   const payPayInstance = initializePayPay();
-  
+
   // 認証情報がない場合はデモモードで動作
   if (!payPayInstance) {
     // デモモード: 成功レスポンスを返す
     console.log(`デモモード: 注文ID ${orderId} の支払いQRコードを生成`);
-    
+
     // モックデータを返す
     // 実際のPayPay APIと同じ形式のレスポンスを生成
     return {
@@ -123,34 +123,55 @@ export async function createPayment(orderId: string, amount: number, orderDescri
  * @returns PayPay API応答、または認証情報未設定時はモックデータ
  */
 export async function getPaymentDetails(merchantPaymentId: string) {
-  // PayPay SDKインスタンスを取得
   const payPayInstance = initializePayPay();
-  
-  // 認証情報がない場合はデモモードで動作
+
   if (!payPayInstance) {
-    // デモモード: 成功レスポンスを返す
     console.log(`デモモード: 注文ID ${merchantPaymentId} の支払い状態を取得`);
-    
-    // モックデータを返す
-    // 実際のPayPay APIと同じ形式のレスポンスを生成
     return {
       status: 'SUCCESS',
       data: {
-        status: 'COMPLETED', // 常に決済完了状態を返す
+        status: 'COMPLETED',
         paymentId: `demo-${randomUUID()}`,
-        refunds: [], // 返金データ（デモでは空）
+        refunds: [],
         merchantPaymentId
       }
     };
   }
 
-  // 実際のPayPay APIを呼び出す
   try {
-    // PayPay SDKのGetCodePaymentDetailsは配列を期待するため修正
-    // 支払いステータス確認APIを呼び出し
     return await payPayInstance.GetCodePaymentDetails([merchantPaymentId]);
   } catch (error) {
     console.error('PayPay 支払い詳細取得エラー:', error);
+    throw error;
+  }
+}
+
+
+export async function refundPayment(orderId: string, amount: number) {
+  const payPayInstance = initializePayPay();
+
+  if (!payPayInstance) {
+    console.log(`デモモード: 注文ID ${orderId} の返金処理`);
+    return {status: 'SUCCESS', data: {refundId: `demo-${randomUUID()}`}};
+  }
+
+  try {
+    const paymentDetails = await payPayInstance.GetCodePaymentDetails([orderId]);
+    if (!paymentDetails || !paymentDetails.data || paymentDetails.data.length ===0 ) {
+      throw new Error("Payment details not found");
+    }
+    const payload = {
+      merchantPaymentId: orderId,
+      amount: {
+        amount,
+        currency: 'JPY'
+      },
+      requestedAt: Math.floor(Date.now() / 1000)
+    };
+    const refundResponse = await payPayInstance.RefundPayment(payload);
+    return refundResponse;
+  } catch (error) {
+    console.error('Refund error:', error);
     throw error;
   }
 }
