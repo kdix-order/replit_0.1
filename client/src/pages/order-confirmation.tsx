@@ -19,7 +19,7 @@ import { OrderStatusTracker } from "@/components/order-status-tracker";
  * ユーザーは注文状態の確認やQRコード表示ページへの遷移が可能です
  */
 export default function OrderConfirmation() {
-  const {id} = useParams<{ id: string }>();
+  const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -51,7 +51,8 @@ export default function OrderConfirmation() {
     enabled: !!id && isAuthenticated,
   });
 
-  // TODO: 読み込み中のUIを表示
+  // 読み込み中の状態を表示
+  const isLoading = !order && isAuthenticated;
 
   // 15分後を受け取り目安時間とする
   const estimatedPickupTime = new Date(currentTime.getTime() + 15 * 60000);
