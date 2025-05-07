@@ -296,7 +296,11 @@ export default function Menu() {
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/*TODO: 丼判定*/}
-                {products?.map((product) => (
+                {products?.filter(product => 
+                  !product.name.includes('からあげ2個') && 
+                  !product.name.includes('うま煮 2個') && 
+                  !product.name.includes('キムチ')
+                ).map((product) => (
                 <Card key={product.id} className="overflow-hidden border-2 border-[#e80113] shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <div className="relative">
                     <img
@@ -365,7 +369,11 @@ export default function Menu() {
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {/*TODO: 天津飯判定*/}
-              {products?.map((product) => (
+              {products?.filter(product => 
+                !product.name.includes('からあげ2個') && 
+                !product.name.includes('うま煮 2個') && 
+                !product.name.includes('キムチ')
+              ).map((product) => (
                 <Card key={product.id} className="overflow-hidden border-2 border-[#e80113] shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <div className="relative">
                     <img
