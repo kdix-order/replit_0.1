@@ -420,6 +420,8 @@ export default function Menu() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {products?.filter(product =>
+                product.name.includes('からあげ2個') ||
+                product.name.includes('うま煮 2個') ||
                 product.name.includes('キムチ')
               ).map((product) => (
                 <div key={product.id} className="flex items-center justify-between bg-gradient-to-r from-white to-[#fffaee] p-4 rounded-lg border-2 border-[#e80113]/40 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#e80113]">
