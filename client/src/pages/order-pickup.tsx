@@ -228,14 +228,8 @@ export default function OrderPickup() {
         </CardFooter>
       </Card>
 
-      {/* 店舗情報 */}
-      <div className="bg-white p-6 mt-6 flex-grow">
-        <h3 className="font-bold mb-2">味店焼マン 渋谷店</h3>
-        <p className="text-sm text-gray-600 mb-4">東京都渋谷区渋谷1-23-45</p>
-        <p className="text-xs text-gray-400">
-          ご注文の変更・キャンセルについては店舗までお問い合わせください
-        </p>
-      </div>
+      {/* スペーサー */}
+      <div className="flex-grow"></div>
     </div>
   );
 }
