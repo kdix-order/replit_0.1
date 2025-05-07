@@ -294,10 +294,6 @@ export default function Menu() {
             className="mb-12"
             ref={(el) => (categoryRefs.current["donburi"] = el)}
           >
-            <h2 className="text-2xl font-bold text-[#333] mb-6 border-b-2 border-[#e80113] pb-2 flex items-center">
-              <ShoppingBag className="mr-2 text-[#e80113]" size={20} />
-              丼
-            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/*TODO: 丼判定*/}
                 {products?.map((product) => (
@@ -367,10 +363,6 @@ export default function Menu() {
             className="mb-12"
             ref={(el) => (categoryRefs.current["tenshinhan"] = el)}
           >
-            <h2 className="text-2xl font-bold text-[#333] mb-6 border-b-2 border-[#e80113] pb-2 flex items-center">
-              <Bookmark className="mr-2 text-[#e80113]" size={20} />
-              天津飯
-            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {/*TODO: 天津飯判定*/}
               {products?.map((product) => (
