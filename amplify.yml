@@ -1,0 +1,25 @@
+version: 1
+backend:
+  phases:
+    build:
+      commands:
+        - npm install
+        - npm run build
+    postBuild:
+      commands:
+        - echo "Amplify backend build completed"
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm install
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: dist/public
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
