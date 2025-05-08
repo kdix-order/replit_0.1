@@ -57,7 +57,7 @@ router.get("/api/payments/paypay/completed/:merchantPaymentId", async (req, res)
       // Clear cart
       await storage.clearCart(order.userId);
 
-      res.redirect(`/pickup/${order.id}`);
+      res.redirect(`/order-confirmation/${order.id}`);
     } else {
       // 支払い失敗時の処理
       res.redirect("/failure");
