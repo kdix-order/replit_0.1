@@ -60,6 +60,7 @@ export const timeSlots = pgTable("time_slots", {
   time: text("time").notNull(), // Format: HH:MM
   capacity: integer("capacity").notNull(),
   available: integer("available").notNull(),
+  disabled: boolean("disabled").default(false),
 });
 
 export const insertTimeSlotSchema = createInsertSchema(timeSlots).pick({
@@ -111,6 +112,7 @@ export type CartItemWithProduct = CartItem & {
 
 export type TimeSlotWithAvailability = TimeSlot & {
   isFull: boolean;
+  isPast?: boolean;
 };
 
 export type OrderWithTimeSlot = Order & {

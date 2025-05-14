@@ -167,19 +167,63 @@ export class PgStorage implements IStorage {
   }
 
   async getTimeSlot(id: string): Promise<TimeSlot | undefined> {
-    const rows = await this.db
-      .select()
-      .from(timeSlots)
-      .where(eq(timeSlots.id, id));
-    return rows[0];
+    try {
+      const rows = await this.db
+        .select({
+          id: timeSlots.id,
+          time: timeSlots.time,
+          capacity: timeSlots.capacity,
+          available: timeSlots.available
+        })
+        .from(timeSlots)
+        .where(eq(timeSlots.id, id));
+      
+      if (rows.length === 0) return undefined;
+      
+      return { ...rows[0], disabled: false };
+    } catch (error) {
+      console.error('Error fetching time slot:', error);
+      return undefined;
+    }
   }
 
   async getTimeSlots(): Promise<TimeSlotWithAvailability[]> {
-    return await this.db.select().from(timeSlots)
-      .then(rows => rows.map(row => ({
-        ...row,
-        isFull: row.available <= 0
-      })));
+    try {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      
+      const rows = await this.db
+        .select({
+          id: timeSlots.id,
+          time: timeSlots.time,
+          capacity: timeSlots.capacity,
+          available: timeSlots.available
+        })
+        .from(timeSlots);
+      
+      return rows.map(row => {
+        const timeStart = row.time.split('-')[0];
+        const [hour, minute] = timeStart.split(':').map(num => parseInt(num, 10));
+        
+        const isPast = (hour < currentHour) || (hour === currentHour && minute <= currentMinute);
+        
+        const result: TimeSlotWithAvailability = {
+          id: row.id,
+          time: row.time,
+          capacity: row.capacity,
+          available: row.available,
+          isFull: row.available <= 0,
+          isPast,
+          disabled: false // Add this property in memory only
+        };
+        
+        return result;
+      });
+    } catch (error) {
+      console.error('Error fetching time slots:', error);
+      return [];
+    }
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -230,6 +274,116 @@ export class PgStorage implements IStorage {
       .where(eq(timeSlots.id, id))
       .returning();
     return updated;
+  }
+  
+  async updateTimeSlotCapacity(id: string, capacity: number): Promise<TimeSlot | undefined> {
+    try {
+      const slot = await this.getTimeSlot(id);
+      if (!slot) return undefined;
+      
+      const reservedCount = slot.capacity - slot.available;
+      
+      const newCapacity = Math.max(capacity, reservedCount);
+      
+      const newAvailable = newCapacity - reservedCount;
+      
+      const [updated] = await this.db
+        .update(timeSlots)
+        .set({ 
+          capacity: newCapacity,
+          available: newAvailable
+        })
+        .where(eq(timeSlots.id, id))
+        .returning();
+      
+      return updated;
+    } catch (error) {
+      console.error('Error updating time slot capacity:', error);
+      return undefined;
+    }
+  }
+
+  async disableTimeSlot(id: string): Promise<TimeSlot | undefined> {
+    try {
+      const rows = await this.db
+        .select({
+          id: timeSlots.id,
+          time: timeSlots.time,
+          capacity: timeSlots.capacity,
+          available: timeSlots.available
+        })
+        .from(timeSlots)
+        .where(eq(timeSlots.id, id));
+      
+      const slot = rows[0];
+      if (!slot) return undefined;
+      
+      const existingOrders = await this.db
+        .select()
+        .from(orders)
+        .where(eq(orders.timeSlotId, id));
+      
+      if (existingOrders.length > 0) {
+        console.log(`Time slot ${id} has ${existingOrders.length} existing orders. Marking as disabled but preserving reservations.`);
+      }
+      
+      return { ...slot, disabled: true };
+    } catch (error) {
+      console.error('Error disabling time slot:', error);
+      return undefined;
+    }
+  }
+
+  async enableTimeSlot(id: string): Promise<TimeSlot | undefined> {
+    try {
+      const rows = await this.db
+        .select({
+          id: timeSlots.id,
+          time: timeSlots.time,
+          capacity: timeSlots.capacity,
+          available: timeSlots.available
+        })
+        .from(timeSlots)
+        .where(eq(timeSlots.id, id));
+      
+      const slot = rows[0];
+      if (!slot) return undefined;
+      
+      return { ...slot, disabled: false };
+    } catch (error) {
+      console.error('Error enabling time slot:', error);
+      return undefined;
+    }
+  }
+  
+  async resetTimeSlots(): Promise<void> {
+    try {
+      await this.db.delete(timeSlots);
+      
+      for (let hour = 10; hour < 19; hour++) {
+        for (let minute = 0; minute < 60; minute += 10) {
+          const startHour = hour.toString().padStart(2, '0');
+          const startMinute = minute.toString().padStart(2, '0');
+          const endHour = (minute === 50) ? (hour + 1).toString().padStart(2, '0') : startHour;
+          const endMinute = (minute === 50) ? '00' : (minute + 10).toString().padStart(2, '0');
+          const time = `${startHour}:${startMinute}-${endHour}:${endMinute}`;
+          
+          const capacity = 10;
+          const available = Math.floor(Math.random() * 3) + 8;
+          
+          await this.db.insert(timeSlots).values({
+            id: randomUUID(),
+            time,
+            capacity,
+            available
+          });
+        }
+      }
+      
+      console.log('Time slots reset successfully');
+    } catch (error) {
+      console.error('Error resetting time slots:', error);
+    }
   }
 
   async addProduct(insertProduct: InsertProduct): Promise<Product> {

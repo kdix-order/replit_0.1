@@ -16,6 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
  * @property available - 残りの予約可能数
  * @property capacity - 最大予約可能数
  * @property isFull - 予約が満枠かどうかのフラグ
+ * @property disabled - 管理者によって無効化されているかどうかのフラグ
+ * @property isPast - 過去の時間枠かどうかのフラグ
  */
 type TimeSlot = {
   id: string;
@@ -23,6 +25,8 @@ type TimeSlot = {
   available: number;
   capacity: number;
   isFull: boolean;
+  disabled?: boolean;
+  isPast?: boolean;
 };
 
 /**
@@ -126,29 +130,38 @@ export function TimeSlotSelector({ onSelect, selectedId }: TimeSlotSelectorProps
             // 1. 利用可能かどうか
             // 2. 選択されているかどうか
             className={`p-1 sm:p-2 rounded-md text-sm flex flex-col items-center h-16 sm:h-20 ${
-              slot.available > 0
+              slot.available > 0 && !slot.disabled && !slot.isPast
                 ? selectedId === slot.id
                   ? "bg-[#e80113] text-white border-[#e80113] hover:bg-red-700" // 選択中: 赤色の背景
                   : "text-gray-900 hover:bg-gray-100 border-gray-200"           // 未選択: 白背景
-                : "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200" // 満枠: 灰色背景
+                : "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200" // 満枠/無効/過去: 灰色背景
             }`}
-            // 枠が利用可能な場合のみクリックイベントを発火
-            onClick={() => slot.available > 0 && onSelect(slot.id)}
-            // 枠が満杯の場合は無効化
-            disabled={slot.available <= 0}
+            // 枠が利用可能で無効化されておらず過去の時間枠でない場合のみクリックイベントを発火
+            onClick={() => slot.available > 0 && !slot.disabled && !slot.isPast && onSelect(slot.id)}
+            disabled={slot.available <= 0 || slot.disabled || slot.isPast}
           >
             {/* 時間帯表示 */}
             <span className="text-sm sm:text-base font-medium mb-0.5 sm:mb-1">{slot.time}</span>
             {/* 残り枠数表示バッジ - 状態に応じて色変更 */}
             <span className={`block text-xs rounded-full px-1.5 sm:px-2 py-0.5 ${
-              slot.available > 0 
-                ? selectedId === slot.id
-                  ? "bg-white text-[#e80113]"  // 選択中: 白背景に赤文字
-                  : "bg-[#fee10b] text-black"  // 利用可能: 黄色背景に黒文字
-                : "bg-gray-200 text-gray-500"  // 満枠: 灰色
+              slot.disabled
+                ? "bg-gray-200 text-gray-500" // 無効: 灰色
+                : slot.isPast
+                  ? "bg-gray-200 text-gray-500" // 過去: 灰色
+                  : slot.available > 0 
+                    ? selectedId === slot.id
+                      ? "bg-white text-[#e80113]"  // 選択中: 白背景に赤文字
+                      : "bg-[#fee10b] text-black"  // 利用可能: 黄色背景に黒文字
+                    : "bg-gray-200 text-gray-500"  // 満枠: 灰色
             }`}>
-              {/* 残り枠数またはメッセージ */}
-              {slot.available > 0 ? `残${slot.available}枠` : "満枠"}
+              {/* 状態に応じたメッセージ */}
+              {slot.disabled 
+                ? "無効" 
+                : slot.isPast 
+                  ? "過去" 
+                  : slot.available > 0 
+                    ? `残${slot.available}枠` 
+                    : "満枠"}
             </span>
           </Button>
         ))}

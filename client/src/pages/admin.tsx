@@ -13,7 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getCustomizationLabel } from "@/lib/utils";
 import { BowlSteamSpinner } from "@/components/ui/food-spinner";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter, Clock, AlertCircle, PauseCircle, PlayCircle, MessageSquare, ThumbsUp, ThumbsDown, User, Calendar } from "lucide-react";
+import { RefreshCw, Filter, Clock, AlertCircle, PauseCircle, PlayCircle, MessageSquare, ThumbsUp, ThumbsDown, User, Calendar, Plus, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -24,6 +24,7 @@ import { useStoreSettings, useUpdateStoreSettings } from "@/hooks/use-store-sett
 import { useFeedback } from "@/hooks/use-feedback";
 import { Switch } from "@/components/ui/switch";
 import { OrderStatusTracker } from "@/components/order-status-tracker";
+import { TimeSlotWithAvailability } from "../../../shared/schema";
 
 type OrderItem = {
   id: string;
@@ -327,6 +328,280 @@ function FeedbackTab() {
                     {feedback.comment}
                   </div>
                 )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * 時間枠管理タブコンポーネント
+ * 受取時間枠の有効/無効の切り替えや最大人数の変更機能を提供します
+ */
+function TimeSlotManagementTab() {
+  const { toast } = useToast();
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<any | null>(null);
+  
+  const { 
+    data: timeSlots, 
+    isLoading, 
+    refetch 
+  } = useQuery<TimeSlotWithAvailability[]>({
+    queryKey: ["/api/admin/timeslots"],
+  });
+  
+  const updateCapacityMutation = useMutation({
+    mutationFn: async ({ id, capacity }: { id: string; capacity: number }) => {
+      const response = await apiRequest("PATCH", `/api/admin/timeslots/${id}/capacity`, { capacity });
+      return response.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({
+        title: "最大人数を更新しました",
+        description: "時間枠の最大人数が正常に更新されました。",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "エラーが発生しました",
+        description: error.message || "最大人数の更新に失敗しました。もう一度お試しください。",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const toggleTimeSlotMutation = useMutation({
+    mutationFn: async ({ id, enable }: { id: string; enable: boolean }) => {
+      const endpoint = enable ? `/api/admin/timeslots/${id}/enable` : `/api/admin/timeslots/${id}/disable`;
+      const response = await apiRequest("PATCH", endpoint, {});
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      refetch();
+      toast({
+        title: variables.enable ? "時間枠を有効化しました" : "時間枠を無効化しました",
+        description: variables.enable 
+          ? "時間枠が利用可能になりました。" 
+          : "時間枠が利用不可になりました。",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "エラーが発生しました",
+        description: error.message || "時間枠の更新に失敗しました。もう一度お試しください。",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const resetTimeSlotsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/timeslots/reset", {});
+      return response.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({
+        title: "時間枠をリセットしました",
+        description: "すべての時間枠が初期状態にリセットされました。",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "エラーが発生しました",
+        description: error.message || "時間枠のリセットに失敗しました。もう一度お試しください。",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleCapacityChange = (id: string, capacity: number) => {
+    updateCapacityMutation.mutate({ id, capacity });
+  };
+  
+  const handleToggleTimeSlot = (id: string, enable: boolean) => {
+    toggleTimeSlotMutation.mutate({ id, enable });
+  };
+  
+  const timeSlotsByHour = useMemo(() => {
+    if (!timeSlots) return {};
+    
+    return timeSlots.reduce((acc: Record<string, TimeSlotWithAvailability[]>, slot) => {
+      const hour = slot.time.split(':')[0];
+      if (!acc[hour]) {
+        acc[hour] = [];
+      }
+      acc[hour].push(slot);
+      return acc;
+    }, {});
+  }, [timeSlots]);
+  
+  if (isLoading) {
+    return (
+      <div className="text-center py-10">
+        <BowlSteamSpinner size="lg" className="mx-auto text-[#e80113] mb-4" />
+        <p className="text-gray-500">時間枠情報を読み込んでいます...</p>
+      </div>
+    );
+  }
+  
+  return (
+    <Card className="border-2 border-gray-100 shadow-md overflow-hidden mb-8">
+      <CardHeader className="bg-[#e80113] text-white py-4 px-6">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg font-bold">受取時間枠管理</CardTitle>
+          <Button 
+            size="sm" 
+            onClick={() => {
+              if (window.confirm("すべての時間枠を初期状態にリセットします。既存の予約がある時間枠は保持されます。よろしいですか？")) {
+                resetTimeSlotsMutation.mutate();
+              }
+            }}
+            className="bg-white text-[#e80113] hover:bg-gray-100"
+          >
+            <RefreshCw className="w-4 h-4 mr-1" />
+            時間枠をリセット
+          </Button>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="p-6">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
+          <h3 className="font-bold text-yellow-800 flex items-center mb-2">
+            <AlertCircle className="w-5 h-5 mr-2" />
+            受取時間枠の管理について
+          </h3>
+          <p className="text-sm text-yellow-700 mb-2">
+            以下の操作が可能です：
+          </p>
+          <ul className="list-disc pl-5 text-sm text-yellow-700">
+            <li>各時間枠の有効/無効を切り替える（無効化すると顧客が選択できなくなります）</li>
+            <li>各時間枠の最大受付人数を変更する（1〜20の範囲で設定可能）</li>
+            <li>すべての時間枠を初期状態にリセットする</li>
+          </ul>
+          <div className="mt-3 bg-blue-50 border border-blue-200 rounded-md p-2">
+            <p className="text-sm text-blue-700 flex items-center">
+              <AlertCircle className="w-4 h-4 mr-1 flex-shrink-0" />
+              <span>
+                <strong>重要：</strong> 時間枠を無効化したり最大人数を変更しても、既存の予約はキャンセルされません。予約済みの時間枠は安全に管理できます。
+              </span>
+            </p>
+          </div>
+        </div>
+        
+        {!timeSlots || timeSlots.length === 0 ? (
+          <div className="text-center py-10">
+            <Clock className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+            <h3 className="text-xl font-medium text-gray-700 mb-2">時間枠がありません</h3>
+            <p className="text-gray-500">時間枠が存在しないか、エラーが発生しました。リセットボタンを押してみてください。</p>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {Object.entries(timeSlotsByHour).map(([hour, slots]) => (
+              <div key={hour} className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                  <h3 className="font-semibold text-gray-700">{hour}時台</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                  {slots.map((slot) => (
+                    <div 
+                      key={slot.id} 
+                      className={`border rounded-md p-3 ${
+                        slot.disabled 
+                          ? 'bg-gray-50 border-gray-300' 
+                          : 'bg-white border-gray-200'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="font-medium">{slot.time}</span>
+                        <div className="flex items-center">
+                          {slot.capacity - slot.available > 0 && (
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full mr-2" title="この時間枠には既存の予約があります。無効化しても予約は保持されます。">
+                              予約あり
+                            </span>
+                          )}
+                          <Switch 
+                            checked={!slot.disabled}
+                            onCheckedChange={(checked) => {
+                              if (!checked && slot.capacity - slot.available > 0) {
+                                if (window.confirm(`この時間枠には${slot.capacity - slot.available}件の予約があります。無効化しても既存の予約は保持されます。続行しますか？`)) {
+                                  handleToggleTimeSlot(slot.id, checked);
+                                }
+                              } else {
+                                handleToggleTimeSlot(slot.id, checked);
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">最大人数</p>
+                          <div className="flex items-center">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                const reservedCount = slot.capacity - slot.available;
+                                if (slot.capacity > 1) {
+                                  if (slot.capacity - 1 < reservedCount) {
+                                    if (window.confirm(`現在の予約数(${reservedCount}件)より少ない人数に設定しようとしています。既存の予約は保持されますが、新規予約は受け付けられなくなります。続行しますか？`)) {
+                                      handleCapacityChange(slot.id, slot.capacity - 1);
+                                    }
+                                  } else {
+                                    handleCapacityChange(slot.id, slot.capacity - 1);
+                                  }
+                                }
+                              }}
+                              disabled={slot.capacity <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="mx-2 font-medium">{slot.capacity}</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                if (slot.capacity < 20) {
+                                  handleCapacityChange(slot.id, slot.capacity + 1);
+                                }
+                              }}
+                              disabled={slot.capacity >= 20}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500 mb-1">現在の予約</p>
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            slot.available === 0 
+                              ? 'bg-red-100 text-red-800' 
+                              : slot.available <= 3 
+                                ? 'bg-yellow-100 text-yellow-800' 
+                                : 'bg-green-100 text-green-800'
+                          }`}>
+                            {slot.capacity - slot.available}/{slot.capacity}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {slot.disabled && slot.capacity - slot.available > 0 && (
+                        <div className="mt-2 bg-blue-50 border border-blue-100 rounded p-2 text-xs text-blue-700">
+                          この時間枠は無効化されていますが、{slot.capacity - slot.available}件の既存予約は保持されています。
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
@@ -658,7 +933,7 @@ export default function Admin() {
         </CardContent>
       </Card>
 
-      {/* Orders & Feedback tabs */}
+      {/* Orders, Feedback & Time Slots tabs */}
       <Tabs defaultValue="orders" className="mb-8">
         <TabsList className="w-full bg-gray-100 p-0.5 mb-6">
           <TabsTrigger 
@@ -676,6 +951,14 @@ export default function Admin() {
           >
             <div className="flex items-center justify-center">
               フィードバック
+            </div>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="timeslots" 
+            className="flex-1 py-3 bg-white data-[state=active]:bg-[#e80113] data-[state=active]:text-white rounded-md"
+          >
+            <div className="flex items-center justify-center">
+              受取時間枠管理
             </div>
           </TabsTrigger>
         </TabsList>
@@ -767,6 +1050,11 @@ export default function Admin() {
         {/* 顧客フィードバックタブ */}
         <TabsContent value="feedback">
           <FeedbackTab />
+        </TabsContent>
+        
+        {/* 時間枠管理タブ */}
+        <TabsContent value="timeslots">
+          <TimeSlotManagementTab />
         </TabsContent>
       </Tabs>
       

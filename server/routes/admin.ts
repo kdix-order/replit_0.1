@@ -168,4 +168,83 @@ router.get('/api/admin/feedback', isAuthenticated, async (req: Request, res: Res
   }
 });
 
+// 管理者向け - 時間枠一覧を取得
+router.get('/api/admin/timeslots', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const timeSlots = await storage.getTimeSlots();
+    res.json(timeSlots);
+  } catch (error) {
+    console.error('Error fetching time slots:', error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 管理者向け - 時間枠の容量を更新
+router.patch('/api/admin/timeslots/:id/capacity', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { capacity } = req.body;
+    
+    if (typeof capacity !== 'number' || capacity < 0) {
+      return res.status(400).json({ message: "容量は0以上の数値である必要があります" });
+    }
+    
+    const updated = await storage.updateTimeSlotCapacity(id, capacity);
+    if (!updated) {
+      return res.status(404).json({ message: "指定された時間枠が見つかりません" });
+    }
+    
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating time slot capacity:', error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 管理者向け - 時間枠を無効化
+router.patch('/api/admin/timeslots/:id/disable', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const updated = await storage.disableTimeSlot(id);
+    
+    if (!updated) {
+      return res.status(404).json({ message: "指定された時間枠が見つかりません" });
+    }
+    
+    res.json(updated);
+  } catch (error) {
+    console.error('Error disabling time slot:', error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 管理者向け - 時間枠を有効化
+router.patch('/api/admin/timeslots/:id/enable', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const updated = await storage.enableTimeSlot(id);
+    
+    if (!updated) {
+      return res.status(404).json({ message: "指定された時間枠が見つかりません" });
+    }
+    
+    res.json(updated);
+  } catch (error) {
+    console.error('Error enabling time slot:', error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 管理者向け - 時間枠をリセット
+router.post('/api/admin/timeslots/reset', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    await storage.resetTimeSlots();
+    const timeSlots = await storage.getTimeSlots();
+    res.json(timeSlots);
+  } catch (error) {
+    console.error('Error resetting time slots:', error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 export default router;
