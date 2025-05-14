@@ -94,7 +94,7 @@ export function PayPayRefundDialog({
             {status === 'success' ? '返金処理完了' : '返金処理'}
           </DialogTitle>
           <DialogDescription>
-            {status === 'success' 
+            {status === 'success'
               ? '返金処理が正常に完了しました'
               : '注文の返金処理を行います'}
           </DialogDescription>
@@ -119,7 +119,7 @@ export function PayPayRefundDialog({
                 id="reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="返金理由を入力してください"
+                placeholder="返金理由を入力してください（任意）"
                 className="col-span-3"
               />
             </div>
@@ -147,9 +147,9 @@ export function PayPayRefundDialog({
               <Button variant="outline" onClick={handleClose}>
                 キャンセル
               </Button>
-              <Button 
-                onClick={handleRefund} 
-                disabled={isRefunding || !reason.trim()}
+              <Button
+                onClick={handleRefund}
+                disabled={isRefunding}
                 className="bg-red-600 hover:bg-red-700"
               >
                 {isRefunding ? (
