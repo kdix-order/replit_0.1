@@ -871,6 +871,17 @@ export default function Admin() {
                             完了
                           </Label>
                         </div>
+                        
+                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'refunded' ? 'bg-gray-50 border border-gray-200' : ''}`}>
+                          <RadioGroupItem value="refunded" id={`detail-refunded-${detailOrder.id}`} disabled />
+                          <Label htmlFor={`detail-refunded-${detailOrder.id}`} className="flex items-center cursor-not-allowed text-gray-500">
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                            </svg>
+                            返金済み
+                            <span className="ml-2 text-xs bg-gray-100 px-1 py-0.5 rounded">返金処理後のみ</span>
+                          </Label>
+                        </div>
                       </RadioGroup>
                     </CardContent>
                   </Card>
