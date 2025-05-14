@@ -24,6 +24,7 @@ import { useStoreSettings, useUpdateStoreSettings } from "@/hooks/use-store-sett
 import { useFeedback } from "@/hooks/use-feedback";
 import { Switch } from "@/components/ui/switch";
 import { OrderStatusTracker } from "@/components/order-status-tracker";
+import { PayPayRefundDialog } from "@/components/paypay-refund-dialog";
 
 type OrderItem = {
   id: string;
@@ -38,7 +39,7 @@ type Order = {
   id: string;
   userId: string;
   callNumber: number;
-  status: "new" | "preparing" | "completed";
+  status: "new" | "preparing" | "completed" | "refunded";
   total: number;
   timeSlot: {
     id: string;
@@ -52,7 +53,8 @@ const statusLabels = {
   new: { text: "受付済み", className: "bg-[#fee10b] text-black", icon: <Clock className="w-4 h-4 mr-1" /> },
   paid: { text: "支払い済み", className: "bg-[#fee10b] text-black", icon: <Clock className="w-4 h-4 mr-1" /> },
   preparing: { text: "準備中", className: "bg-blue-100 text-blue-800", icon: <BowlSteamSpinner size="xs" className="mr-1 text-blue-800" /> },
-  completed: { text: "完了", className: "bg-green-100 text-green-800", icon: null }
+  completed: { text: "完了", className: "bg-green-100 text-green-800", icon: null },
+  refunded: { text: "返金済み", className: "bg-gray-100 text-gray-800", icon: <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg> }
 };
 
 /**
@@ -154,10 +156,21 @@ function OrderItem({
             </div>
           </div>
           
-          {/* 進捗ステータストラッカー */}
-          <div className="mb-4">
-            <OrderStatusTracker status={order.status} />
-          </div>
+          {/* 進捗ステータストラッカー - 返金済み以外の場合のみ表示 */}
+          {order.status !== 'refunded' && (
+            <div className="mb-4">
+              <OrderStatusTracker status={order.status as "new" | "paid" | "preparing" | "completed"} />
+            </div>
+          )}
+          {/* 返金済みの場合のメッセージ */}
+          {order.status === 'refunded' && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg text-center">
+              <svg className="w-8 h-8 mx-auto mb-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+              </svg>
+              <p className="text-lg font-medium text-gray-700">この注文は返金処理が完了しています</p>
+            </div>
+          )}
           
           {/* 注文内容詳細 */}
           <div className="bg-gray-50 rounded-lg p-3 mb-4">
@@ -349,6 +362,7 @@ export default function Admin() {
   const [sortNewest, setSortNewest] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
+  const [showRefundDialog, setShowRefundDialog] = useState<boolean>(false);
   
   // 店舗設定の取得
   const { storeSettings, isAcceptingOrders, refetch: refetchStoreSettings } = useStoreSettings();
@@ -456,13 +470,13 @@ export default function Admin() {
 
   // Count orders by status
   const orderCounts = useMemo(() => {
-    if (!orders) return { new: 0, preparing: 0, completed: 0, total: 0 };
+    if (!orders) return { new: 0, preparing: 0, completed: 0, refunded: 0, total: 0 };
     
-    return orders.reduce((acc: { new: number, preparing: number, completed: number, total: number }, order: Order) => {
+    return orders.reduce((acc: { new: number, preparing: number, completed: number, refunded: number, total: number }, order: Order) => {
       acc[order.status as keyof typeof acc]++;
       acc.total++;
       return acc;
-    }, { new: 0, preparing: 0, completed: 0, total: 0 });
+    }, { new: 0, preparing: 0, completed: 0, refunded: 0, total: 0 });
   }, [orders]);
 
   // Redirect if not admin
@@ -718,6 +732,14 @@ export default function Admin() {
                           完了 ({orderCounts.completed})
                         </div>
                       </SelectItem>
+                      <SelectItem value="refunded">
+                        <div className="flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                          </svg>
+                          返金済み ({orderCounts.refunded})
+                        </div>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   
@@ -894,13 +916,35 @@ export default function Admin() {
                 </div>
               </div>
               
-              <div className="pt-2 flex justify-end mt-4">
-                <Button onClick={() => setDetailOrder(null)}>閉じる</Button>
+              <div className="pt-2 flex justify-between mt-4">
+                {detailOrder.status === 'completed' && (
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => setShowRefundDialog(true)}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                    返金処理
+                  </Button>
+                )}
+                <Button onClick={() => setDetailOrder(null)} className={detailOrder.status === 'completed' ? 'ml-auto' : ''}>閉じる</Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* PayPay返金ダイアログ */}
+      {detailOrder && (
+        <PayPayRefundDialog
+          isOpen={showRefundDialog}
+          onClose={() => setShowRefundDialog(false)}
+          orderId={detailOrder.id}
+          amount={detailOrder.total}
+        />
+      )}
     </div>
   );
 }

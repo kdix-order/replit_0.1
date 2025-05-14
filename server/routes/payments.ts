@@ -3,8 +3,8 @@
  ***********************************/
 
 import express from "express";
-import { isAuthenticated } from "../middlewares/auth";
-import { createPayment, getPaymentDetails } from "../paypay";
+import { isAuthenticated, isAdmin } from "../middlewares/auth";
+import { createPayment, getPaymentDetails, refundPayment } from "../paypay";
 import { storage } from "server/storage";
 
 const router = express.Router();
@@ -81,6 +81,29 @@ router.get("/api/payments/paypay/status/:merchantPaymentId", isAuthenticated, as
     console.error('PayPay 支払い状態確認エラー:', error);
     res.status(500).json({
       message: '支払い状態確認中にエラーが発生しました',
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+router.post("/api/payments/paypay/refund", isAuthenticated, isAdmin, async (req, res) => {
+  try {
+
+    const { orderId, amount, reason } = req.body;
+
+    if (!orderId || !amount) {
+      return res.status(400).json({ message: '注文IDと返金金額は必須です' });
+    }
+
+    const refundResponse = await refundPayment(orderId, amount, reason);
+    
+    await storage.updateOrderStatus(orderId, 'refunded');
+
+    return res.json(refundResponse);
+  } catch (error) {
+    console.error('返金処理エラー:', error);
+    return res.status(500).json({
+      message: '返金処理中にエラーが発生しました',
       error: error instanceof Error ? error.message : "Unknown error"
     });
   }
