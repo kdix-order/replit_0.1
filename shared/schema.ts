@@ -73,7 +73,7 @@ export const orders = pgTable("orders", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull(),
   callNumber: serial("call_number").notNull(),
-  status: text("status").notNull().default("new"), // new, paid, preparing, completed
+  status: text("status").notNull().default("new"), // new, paid, preparing, completed, refunded
   total: integer("total").notNull(), // Total price in yen
   timeSlotId: uuid("time_slot_id").notNull().references(() => timeSlots.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow(),

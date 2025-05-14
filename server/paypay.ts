@@ -154,3 +154,62 @@ export async function getPaymentDetails(merchantPaymentId: string) {
     throw error;
   }
 }
+
+/**
+ * 支払いの返金処理を行う関数
+ * 
+ * PayPay API認証情報がある場合は実際にAPIを呼び出し、
+ * ない場合はモックデータを返すデモモードで動作します。
+ * 
+ * @param merchantPaymentId - 加盟店注文ID（注文作成時に使用したID）
+ * @param amount - 返金金額（日本円）
+ * @param reason - 返金理由（オプション）
+ * @returns PayPay API応答、または認証情報未設定時はモックデータ
+ */
+export async function refundPayment(merchantPaymentId: string, amount: number, reason?: string) {
+  // PayPay SDKインスタンスを取得
+  const payPayInstance = initializePayPay();
+  
+  // 認証情報がない場合はデモモードで動作
+  if (!payPayInstance) {
+    // デモモード: 成功レスポンスを返す
+    console.log(`デモモード: 注文ID ${merchantPaymentId} の返金処理を実行`);
+    
+    // モックデータを返す
+    // 実際のPayPay APIと同じ形式のレスポンスを生成
+    return {
+      status: 'SUCCESS',
+      data: {
+        status: 'COMPLETED',
+        paymentId: `demo-${randomUUID()}`,
+        refundId: `refund-${randomUUID()}`,
+        merchantPaymentId,
+        amount: {
+          amount,
+          currency: 'JPY'
+        },
+        requestedAt: new Date().getTime(),
+        reason: reason || '顧客都合'
+      }
+    };
+  }
+
+  // 実際のPayPay APIを呼び出す
+  try {
+    // PayPayの返金APIに送信するペイロード
+    const payload = {
+      merchantRefundId: `refund-${randomUUID()}`,
+      paymentId: merchantPaymentId,
+      amount: {
+        amount,
+        currency: 'JPY'
+      },
+      reason: reason || '顧客都合'
+    };
+
+    return await payPayInstance.PaymentRefund(payload);
+  } catch (error) {
+    console.error('PayPay 返金処理エラー:', error);
+    throw error;
+  }
+}

@@ -28,6 +28,22 @@ type PayPayStatusResponse = {
   };
 };
 
+type PayPayRefundResponse = {
+  status: string;
+  data: {
+    status: PayPayPaymentStatus;
+    paymentId: string;
+    refundId: string;
+    merchantPaymentId: string;
+    amount: {
+      amount: number;
+      currency: string;
+    };
+    requestedAt: number;
+    reason: string;
+  };
+};
+
 /**
  * PayPay決済機能を使用するためのカスタムフック
  * QRコード生成と支払い状態確認の機能を提供します
@@ -97,6 +113,34 @@ export function usePayPay() {
     queryClient.invalidateQueries({ queryKey: ['/api/payments/paypay/status'] });
   };
 
+  const refundPaymentMutation = useMutation({
+    mutationFn: async ({ 
+      orderId, 
+      amount, 
+      reason 
+    }: {
+      orderId: string;
+      amount: number;
+      reason?: string;
+    }) => {
+      const response = await apiRequest('POST', '/api/payments/paypay/refund', {
+        orderId,
+        amount,
+        reason
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || '返金処理中にエラーが発生しました');
+      }
+
+      return response.json() as Promise<PayPayRefundResponse>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+    }
+  });
+
   return {
     createPayment: createPaymentMutation.mutate,
     isCreating: createPaymentMutation.isPending,
@@ -108,5 +152,10 @@ export function usePayPay() {
     statusError: paymentStatus.error?.message,
 
     resetPaymentStatus,
+    
+    refundPayment: refundPaymentMutation.mutate,
+    isRefunding: refundPaymentMutation.isPending,
+    refundError: refundPaymentMutation.error?.message,
+    refundData: refundPaymentMutation.data,
   };
 }
