@@ -43,9 +43,6 @@ export function PayPayRefundDialog({
   amount
 }: PayPayRefundDialogProps) {
   const [reason, setReason] = useState<string>('');
-  
-  const [refundAmount, setRefundAmount] = useState<number>(amount);
-  
   const [status, setStatus] = useState<'initial' | 'success' | 'error'>('initial');
 
   /**
@@ -64,7 +61,7 @@ export function PayPayRefundDialog({
     try {
       await refundPayment({
         orderId,
-        amount: refundAmount,
+        amount: amount, // 注文の合計金額を固定で使用
         reason
       });
       setStatus('success');
@@ -109,13 +106,10 @@ export function PayPayRefundDialog({
               <Label htmlFor="amount" className="text-right">
                 返金金額
               </Label>
-              <Input
-                id="amount"
-                type="number"
-                value={refundAmount}
-                onChange={(e) => setRefundAmount(Number(e.target.value))}
-                className="col-span-3"
-              />
+              <div className="col-span-3 flex items-center">
+                <span className="font-medium text-lg">¥{amount}</span>
+                <span className="ml-2 text-xs text-gray-500">（注文の合計金額で固定）</span>
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="reason" className="text-right">
@@ -155,7 +149,7 @@ export function PayPayRefundDialog({
               </Button>
               <Button 
                 onClick={handleRefund} 
-                disabled={isRefunding || refundAmount <= 0}
+                disabled={isRefunding || !reason.trim()}
                 className="bg-red-600 hover:bg-red-700"
               >
                 {isRefunding ? (
