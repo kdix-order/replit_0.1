@@ -155,31 +155,33 @@ export class MemStorage implements IStorage {
     sampleProducts.forEach(product => this.addProduct(product));
     
     // Generate time slots
-    // 現在時刻から5分後を最短時間として設定し、10分間隔で時間枠を生成
-    const now = new Date();
-    // 5分後の時間を計算（ミリ秒単位）
-    const fiveMinutesLater = now.getTime() + 5 * 60000;
-    // 10分単位に切り上げる（次の10分間隔の時間にする）
-    const roundedTime = Math.ceil(fiveMinutesLater / (10 * 60000)) * (10 * 60000);
+    const generateTimeSlots = () => {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      
+      for (let hour = 10; hour < 19; hour++) {
+        for (let minute = 0; minute < 60; minute += 10) {
+          const startHour = hour.toString().padStart(2, '0');
+          const startMinute = minute.toString().padStart(2, '0');
+          const endHour = (minute === 50) ? (hour + 1).toString().padStart(2, '0') : startHour;
+          const endMinute = (minute === 50) ? '00' : (minute + 10).toString().padStart(2, '0');
+          const time = `${startHour}:${startMinute}-${endHour}:${endMinute}`;
+          
+          const capacity = 10;
+          // 初期値として8-10人分の空きを設定
+          const available = Math.floor(Math.random() * 3) + 8;
+          
+          this.addTimeSlot({
+            time,
+            capacity,
+            available
+          });
+        }
+      }
+    };
     
-    // 12個の時間枠を生成（2時間分）
-    for (let i = 0; i < 12; i++) {
-      const slotTime = new Date(roundedTime + i * 10 * 60000);
-      const hours = slotTime.getHours();
-      const minutes = slotTime.getMinutes();
-      const time = `${hours}:${minutes.toString().padStart(2, '0')}`;
-      
-      // すべての時間枠は最大10名まで
-      const capacity = 10;
-      // 初期値として8-10人分の空きがあるようにする
-      const available = Math.floor(Math.random() * 3) + 8;
-      
-      this.addTimeSlot({
-        time,
-        capacity,
-        available
-      });
-    }
+    generateTimeSlots();
   }
 
   // User methods
@@ -298,10 +300,22 @@ export class MemStorage implements IStorage {
 
   // Time slot methods
   async getTimeSlots(): Promise<TimeSlotWithAvailability[]> {
-    return Array.from(this.timeSlots.values()).map(slot => ({
-      ...slot,
-      isFull: slot.available <= 0
-    }));
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    return Array.from(this.timeSlots.values()).map(slot => {
+      const timeStart = slot.time.split('-')[0];
+      const [hour, minute] = timeStart.split(':').map(num => parseInt(num, 10));
+      
+      const isPast = (hour < currentHour) || (hour === currentHour && minute <= currentMinute);
+      
+      return {
+        ...slot,
+        isFull: slot.available <= 0 || slot.disabled === true,
+        isPast
+      };
+    });
   }
 
   async getTimeSlot(id: string): Promise<TimeSlot | undefined> {
@@ -317,9 +331,66 @@ export class MemStorage implements IStorage {
     return updatedSlot;
   }
 
+  async updateTimeSlotCapacity(id: string, capacity: number): Promise<TimeSlot | undefined> {
+    const timeSlot = this.timeSlots.get(id);
+    if (!timeSlot) return undefined;
+    
+    const updatedSlot = { ...timeSlot, capacity };
+    this.timeSlots.set(id, updatedSlot);
+    return updatedSlot;
+  }
+
+  async disableTimeSlot(id: string): Promise<TimeSlot | undefined> {
+    const timeSlot = this.timeSlots.get(id);
+    if (!timeSlot) return undefined;
+    
+    const updatedSlot = { ...timeSlot, disabled: true };
+    this.timeSlots.set(id, updatedSlot);
+    return updatedSlot;
+  }
+
+  async enableTimeSlot(id: string): Promise<TimeSlot | undefined> {
+    const timeSlot = this.timeSlots.get(id);
+    if (!timeSlot) return undefined;
+    
+    const updatedSlot = { ...timeSlot, disabled: false };
+    this.timeSlots.set(id, updatedSlot);
+    return updatedSlot;
+  }
+  
+  async resetTimeSlots(): Promise<void> {
+    this.timeSlots.clear();
+    
+    const generateTimeSlots = () => {
+      const now = new Date();
+      
+      for (let hour = 10; hour < 19; hour++) {
+        for (let minute = 0; minute < 60; minute += 10) {
+          const startHour = hour.toString().padStart(2, '0');
+          const startMinute = minute.toString().padStart(2, '0');
+          const endHour = (minute === 50) ? (hour + 1).toString().padStart(2, '0') : startHour;
+          const endMinute = (minute === 50) ? '00' : (minute + 10).toString().padStart(2, '0');
+          const time = `${startHour}:${startMinute}-${endHour}:${endMinute}`;
+          
+          const capacity = 10;
+          // 初期値として8-10人分の空きを設定
+          const available = Math.floor(Math.random() * 3) + 8;
+          
+          this.addTimeSlot({
+            time,
+            capacity,
+            available
+          });
+        }
+      }
+    };
+    
+    generateTimeSlots();
+  }
+
   private addTimeSlot(insertTimeSlot: InsertTimeSlot): TimeSlot {
     const id = randomUUID();
-    const timeSlot = { ...insertTimeSlot, id };
+    const timeSlot = { ...insertTimeSlot, id, disabled: false };
     this.timeSlots.set(id, timeSlot);
     return timeSlot;
   }
@@ -428,7 +499,14 @@ export class MemStorage implements IStorage {
   
   async getAllFeedback(): Promise<Feedback[]> {
     return Array.from(this.feedbacks.values())
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort((a, b) => {
+        if (!a.createdAt) return 1;  // Sort items with no date to the end
+        if (!b.createdAt) return -1; // Sort items with no date to the end
+        
+        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(String(a.createdAt));
+        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(String(b.createdAt));
+        return dateB.getTime() - dateA.getTime();
+      });
   }
 }
 

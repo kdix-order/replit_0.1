@@ -31,6 +31,10 @@ export interface IStorage {
     getTimeSlots(): Promise<TimeSlotWithAvailability[]>;
     getTimeSlot(id: string): Promise<TimeSlot | undefined>;
     updateTimeSlotAvailability(id: string, available: number): Promise<TimeSlot | undefined>;
+    updateTimeSlotCapacity(id: string, capacity: number): Promise<TimeSlot | undefined>;
+    disableTimeSlot(id: string): Promise<TimeSlot | undefined>;
+    enableTimeSlot(id: string): Promise<TimeSlot | undefined>;
+    resetTimeSlots(): Promise<void>;
 
     // Order methods
     createOrder(order: InsertOrder): Promise<Order>;

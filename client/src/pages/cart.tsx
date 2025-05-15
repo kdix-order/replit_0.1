@@ -105,6 +105,30 @@ export default function Cart() {
   const handlePlaceOrder = () => {
     if (!selectedTimeSlotId) return;
 
+    // 選択された時間枠を検証
+    const selectedTimeSlot = timeSlots?.find(slot => slot.id === selectedTimeSlotId);
+    
+    // 選択された時間枠が過去のものかどうかを現在時刻で再確認
+    if (selectedTimeSlot) {
+      const startTimeStr = selectedTimeSlot.time.split('-')[0].trim();
+      const [hours, minutes] = startTimeStr.split(':').map(Number);
+      
+      const slotTime = new Date();
+      slotTime.setHours(hours, minutes, 0, 0);
+      
+      const currentTime = new Date();
+      
+      // 現在時刻と比較して、過去かどうかを判定
+      if (slotTime < currentTime || selectedTimeSlot.isPast) {
+        toast({
+          title: "選択された時間は過ぎています",
+          description: "申し訳ありませんが、選択された受け取り時間は既に過ぎています。他の時間を選択してください。",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     // PayPayダイアログを開く
     placeOrderMutation.mutate({
       timeSlotId: selectedTimeSlotId,
