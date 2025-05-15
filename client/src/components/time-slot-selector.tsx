@@ -48,6 +48,9 @@ type TimeSlotSelectorProps = {
  * @param selectedId - 現在選択されている時間枠のID（選択なしの場合はnull）
  */
 export function TimeSlotSelector({ onSelect, selectedId }: TimeSlotSelectorProps) {
+  // 現在時刻を取得（コンポーネントがマウントされた時点での時刻）
+  const currentTime = new Date();
+
   /**
    * 時間枠データの取得
    * React Queryを使用してAPIから時間枠情報を取得します
