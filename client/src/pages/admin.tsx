@@ -457,7 +457,7 @@ function TimeSlotManagementTab() {
           <Button 
             size="sm" 
             onClick={() => {
-              if (window.confirm("すべての時間枠を初期状態にリセットします。既存の予約がある時間枠は保持されます。よろしいですか？")) {
+              if (window.confirm("すべての時間枠を初期状態にリセットします。既存の予約がある時間枠は保持されます。この操作を実行しますか？")) {
                 resetTimeSlotsMutation.mutate();
               }
             }}

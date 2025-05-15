@@ -25,7 +25,7 @@ import {
 } from "@shared/schema";
 import { IStorage } from "./istorage";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull, notInArray } from "drizzle-orm";
 import dotenv from "dotenv";
 import { randomUUID } from "crypto";
 
@@ -358,25 +358,62 @@ export class PgStorage implements IStorage {
   
   async resetTimeSlots(): Promise<void> {
     try {
-      await this.db.delete(timeSlots);
+      // 既存の時間枠を削除
+      const existingTimeSlotsWithOrders = await this.db
+        .select({
+          id: timeSlots.id
+        })
+        .from(timeSlots)
+        .leftJoin(orders, eq(orders.timeSlotId, timeSlots.id))
+        .where(isNotNull(orders.id));
+      
+      const timeSlotIdsWithOrders = new Set(existingTimeSlotsWithOrders.map(slot => slot.id));
+      
+      // 注文がない時間枠のみを削除する
+      await this.db
+        .delete(timeSlots)
+        .where(
+          notInArray(
+            timeSlots.id, 
+            Array.from(timeSlotIdsWithOrders)
+          )
+        );
+      
+      // 新しい時間枠を作成
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
       
       for (let hour = 10; hour < 19; hour++) {
         for (let minute = 0; minute < 60; minute += 10) {
+          // 既に存在する時間枠はスキップ
           const startHour = hour.toString().padStart(2, '0');
           const startMinute = minute.toString().padStart(2, '0');
           const endHour = (minute === 50) ? (hour + 1).toString().padStart(2, '0') : startHour;
           const endMinute = (minute === 50) ? '00' : (minute + 10).toString().padStart(2, '0');
           const time = `${startHour}:${startMinute}-${endHour}:${endMinute}`;
           
-          const capacity = 10;
-          const available = Math.floor(Math.random() * 3) + 8;
+          // 既存の時間枠をチェック
+          const existingSlots = await this.db
+            .select()
+            .from(timeSlots)
+            .where(eq(timeSlots.time, time));
           
-          await this.db.insert(timeSlots).values({
-            id: randomUUID(),
-            time,
-            capacity,
-            available
-          });
+          if (existingSlots.length === 0) {
+            const capacity = 10;
+            const available = Math.floor(Math.random() * 3) + 8;
+            
+            // 過去の時間枠は作成しない
+            const isPast = (hour < currentHour) || (hour === currentHour && minute <= currentMinute);
+            if (!isPast) {
+              await this.db.insert(timeSlots).values({
+                id: randomUUID(),
+                time,
+                capacity,
+                available
+              });
+            }
+          }
         }
       }
       
