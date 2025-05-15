@@ -240,10 +240,10 @@ router.post('/api/admin/timeslots/reset', isAuthenticated, isAdmin, async (req, 
   try {
     await storage.resetTimeSlots();
     const timeSlots = await storage.getTimeSlots();
-    res.json(timeSlots);
+    res.status(200).json(timeSlots);
   } catch (error) {
     console.error('Error resetting time slots:', error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "時間枠のリセットに失敗しました", error: error instanceof Error ? error.message : "Unknown error" });
   }
 });
 

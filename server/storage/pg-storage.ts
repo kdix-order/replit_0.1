@@ -177,9 +177,9 @@ export class PgStorage implements IStorage {
         })
         .from(timeSlots)
         .where(eq(timeSlots.id, id));
-      
+
       if (rows.length === 0) return undefined;
-      
+
       return { ...rows[0], disabled: false };
     } catch (error) {
       console.error('Error fetching time slot:', error);
@@ -192,7 +192,7 @@ export class PgStorage implements IStorage {
       const now = new Date();
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
-      
+
       const rows = await this.db
         .select({
           id: timeSlots.id,
@@ -201,13 +201,13 @@ export class PgStorage implements IStorage {
           available: timeSlots.available
         })
         .from(timeSlots);
-      
+
       return rows.map(row => {
         const timeStart = row.time.split('-')[0];
         const [hour, minute] = timeStart.split(':').map(num => parseInt(num, 10));
-        
+
         const isPast = (hour < currentHour) || (hour === currentHour && minute <= currentMinute);
-        
+
         const result: TimeSlotWithAvailability = {
           id: row.id,
           time: row.time,
@@ -217,7 +217,7 @@ export class PgStorage implements IStorage {
           isPast,
           disabled: false // Add this property in memory only
         };
-        
+
         return result;
       });
     } catch (error) {
@@ -275,18 +275,18 @@ export class PgStorage implements IStorage {
       .returning();
     return updated;
   }
-  
+
   async updateTimeSlotCapacity(id: string, capacity: number): Promise<TimeSlot | undefined> {
     try {
       const slot = await this.getTimeSlot(id);
       if (!slot) return undefined;
-      
+
       const reservedCount = slot.capacity - slot.available;
-      
+
       const newCapacity = Math.max(capacity, reservedCount);
-      
+
       const newAvailable = newCapacity - reservedCount;
-      
+
       const [updated] = await this.db
         .update(timeSlots)
         .set({ 
@@ -295,7 +295,7 @@ export class PgStorage implements IStorage {
         })
         .where(eq(timeSlots.id, id))
         .returning();
-      
+
       return updated;
     } catch (error) {
       console.error('Error updating time slot capacity:', error);
@@ -305,29 +305,25 @@ export class PgStorage implements IStorage {
 
   async disableTimeSlot(id: string): Promise<TimeSlot | undefined> {
     try {
+      // 時間枠のメタデータを取得
       const rows = await this.db
-        .select({
-          id: timeSlots.id,
-          time: timeSlots.time,
-          capacity: timeSlots.capacity,
-          available: timeSlots.available
-        })
+        .select()
         .from(timeSlots)
         .where(eq(timeSlots.id, id));
-      
+
+      // 時間枠が存在しない場合は undefined を返す
+      if (rows.length === 0) return undefined;
+
       const slot = rows[0];
-      if (!slot) return undefined;
-      
-      const existingOrders = await this.db
-        .select()
-        .from(orders)
-        .where(eq(orders.timeSlotId, id));
-      
-      if (existingOrders.length > 0) {
-        console.log(`Time slot ${id} has ${existingOrders.length} existing orders. Marking as disabled but preserving reservations.`);
-      }
-      
-      return { ...slot, disabled: true };
+
+      // メモリ上で disabled フラグを true に設定
+      const result = { 
+        ...slot, 
+        disabled: true,
+        isFull: true  // 無効化された時間枠は「満席」として扱う
+      };
+
+      return result;
     } catch (error) {
       console.error('Error disabling time slot:', error);
       return undefined;
@@ -345,17 +341,17 @@ export class PgStorage implements IStorage {
         })
         .from(timeSlots)
         .where(eq(timeSlots.id, id));
-      
+
       const slot = rows[0];
       if (!slot) return undefined;
-      
+
       return { ...slot, disabled: false };
     } catch (error) {
       console.error('Error enabling time slot:', error);
       return undefined;
     }
   }
-  
+
   async resetTimeSlots(): Promise<void> {
     try {
       // 既存の時間枠を削除
@@ -366,9 +362,9 @@ export class PgStorage implements IStorage {
         .from(timeSlots)
         .leftJoin(orders, eq(orders.timeSlotId, timeSlots.id))
         .where(isNotNull(orders.id));
-      
+
       const timeSlotIdsWithOrders = new Set(existingTimeSlotsWithOrders.map(slot => slot.id));
-      
+
       // 注文がない時間枠のみを削除する
       await this.db
         .delete(timeSlots)
@@ -378,12 +374,12 @@ export class PgStorage implements IStorage {
             Array.from(timeSlotIdsWithOrders)
           )
         );
-      
+
       // 新しい時間枠を作成
       const now = new Date();
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
-      
+
       for (let hour = 10; hour < 19; hour++) {
         for (let minute = 0; minute < 60; minute += 10) {
           // 既に存在する時間枠はスキップ
@@ -392,17 +388,17 @@ export class PgStorage implements IStorage {
           const endHour = (minute === 50) ? (hour + 1).toString().padStart(2, '0') : startHour;
           const endMinute = (minute === 50) ? '00' : (minute + 10).toString().padStart(2, '0');
           const time = `${startHour}:${startMinute}-${endHour}:${endMinute}`;
-          
+
           // 既存の時間枠をチェック
           const existingSlots = await this.db
             .select()
             .from(timeSlots)
             .where(eq(timeSlots.time, time));
-          
+
           if (existingSlots.length === 0) {
             const capacity = 10;
             const available = Math.floor(Math.random() * 3) + 8;
-            
+
             // 過去の時間枠は作成しない
             const isPast = (hour < currentHour) || (hour === currentHour && minute <= currentMinute);
             if (!isPast) {
@@ -416,7 +412,7 @@ export class PgStorage implements IStorage {
           }
         }
       }
-      
+
       console.log('Time slots reset successfully');
     } catch (error) {
       console.error('Error resetting time slots:', error);
