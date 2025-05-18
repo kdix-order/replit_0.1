@@ -125,23 +125,26 @@ npm run dev
 
 ```
 .
-├── client/                     # フロントエンド関連ファイル
-│   ├── src/                    # Reactソースコード
-│   │   ├── components/         # UIコンポーネント
-│   │   │   ├── layout/         # レイアウト関連（ヘッダー、フッター、ナビ）
-│   │   │   ├── ui/             # 共通UIコンポーネント（shadcn UI）
-│   │   │   └── ...             # 機能別コンポーネント
-│   │   ├── hooks/              # カスタムフック
-│   │   ├── lib/                # ユーティリティ関数
-│   │   └── pages/              # ページコンポーネント
-├── server/                     # バックエンド関連ファイル
-│   ├── index.ts                # サーバーエントリーポイント
-│   ├── routes.ts               # APIルート定義
-│   ├── storage.ts              # データストレージ
-│   ├── paypay.ts               # PayPay API連携
-│   └── vite.ts                 # Vite開発サーバー設定
-└── shared/                     # 共有ファイル
-    └── schema.ts               # データモデルとZodスキーマ
+├── packages/                   # モノレポパッケージ
+│   ├── client/                 # フロントエンド関連ファイル
+│   │   ├── src/                # Reactソースコード
+│   │   │   ├── components/     # UIコンポーネント
+│   │   │   │   ├── layout/     # レイアウト関連（ヘッダー、フッター、ナビ）
+│   │   │   │   ├── ui/         # 共通UIコンポーネント（shadcn UI）
+│   │   │   │   └── ...         # 機能別コンポーネント
+│   │   │   ├── hooks/          # カスタムフック
+│   │   │   ├── lib/            # ユーティリティ関数
+│   │   │   └── pages/          # ページコンポーネント
+│   ├── server/                 # バックエンド関連ファイル
+│   │   ├── index.ts            # サーバーエントリーポイント
+│   │   ├── routes.ts           # APIルート定義
+│   │   ├── storage.ts          # データストレージ
+│   │   ├── paypay.ts           # PayPay API連携
+│   │   └── vite.ts             # Vite開発サーバー設定
+│   └── shared/                 # 共有ファイル
+│       └── schema.ts           # データモデルとZodスキーマ
+├── turbo.json                  # Turborepo設定ファイル
+└── amplify.yml                 # AWS Amplify設定ファイル
 ```
 
 ## 主要ファイル説明
@@ -247,6 +250,32 @@ PAYPAY_REDIRECT_URL=http://localhost:5000/payment/callback
 - メニュー画面では60秒ごとに店舗設定を自動更新（最新の受付状態を反映）
 - パフォーマンス最適化のため、未使用のアニメーションコンポーネントを削除
 - すべてのコードにJSDocコメントを追加してコードリーディングを容易に
+
+## モノレポ構造
+
+このプロジェクトはTurborepoを使用したモノレポ構造を採用しています。コードは以下のパッケージに分かれています：
+
+- `packages/client` - フロントエンドのReactアプリケーション
+- `packages/server` - バックエンドのExpressサーバー
+- `packages/shared` - クライアントとサーバー間で共有されるスキーマや型定義
+
+### モノレポ開発
+
+```bash
+# 全パッケージの依存関係をインストール
+npm install
+
+# 開発サーバーを起動（クライアントとサーバーの両方）
+npm run dev
+
+# ビルド
+npm run build
+
+# 型チェック
+npm run check
+```
+
+AWS Amplifyでデプロイする際は、フロントエンドとバックエンドが別々のビルドプロセスで処理されます。amplify.ymlファイルで設定されています。
 
 ## ライセンス
 
