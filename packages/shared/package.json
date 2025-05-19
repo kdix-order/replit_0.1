@@ -1,0 +1,17 @@
+{
+  "name": "@ajiten-yakiman/shared",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.39.1",
+    "drizzle-zod": "^0.7.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3"
+  }
+}

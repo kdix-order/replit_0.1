@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-solid border-[#414868];
+  }
+
+  body {
+    @apply font-sans antialiased text-foreground;
+    background-color: #ffec47;
+  }
+  
+  /* 飲食店のモバイルオーダーに適したカラースキーム */
+  :root {
+    --accent-yellow: #ffec47;
+    --accent-yellow-light: #fff5a5;
+    --accent-yellow-dark: #ffc107;
+    --accent-red: #e80113;
+    --accent-orange: #ff9800;
+  }
+}
