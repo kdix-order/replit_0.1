@@ -125,23 +125,26 @@ npm run dev
 
 ```
 .
-├── client/                     # フロントエンド関連ファイル
-│   ├── src/                    # Reactソースコード
-│   │   ├── components/         # UIコンポーネント
-│   │   │   ├── layout/         # レイアウト関連（ヘッダー、フッター、ナビ）
-│   │   │   ├── ui/             # 共通UIコンポーネント（shadcn UI）
-│   │   │   └── ...             # 機能別コンポーネント
-│   │   ├── hooks/              # カスタムフック
-│   │   ├── lib/                # ユーティリティ関数
-│   │   └── pages/              # ページコンポーネント
-├── server/                     # バックエンド関連ファイル
-│   ├── index.ts                # サーバーエントリーポイント
-│   ├── routes.ts               # APIルート定義
-│   ├── storage.ts              # データストレージ
-│   ├── paypay.ts               # PayPay API連携
-│   └── vite.ts                 # Vite開発サーバー設定
-└── shared/                     # 共有ファイル
-    └── schema.ts               # データモデルとZodスキーマ
+├── packages/                   # モノレポパッケージ
+│   ├── client/                 # フロントエンド関連ファイル
+│   │   ├── src/                # Reactソースコード
+│   │   │   ├── components/     # UIコンポーネント
+│   │   │   │   ├── layout/     # レイアウト関連（ヘッダー、フッター、ナビ）
+│   │   │   │   ├── ui/         # 共通UIコンポーネント（shadcn UI）
+│   │   │   │   └── ...         # 機能別コンポーネント
+│   │   │   ├── hooks/          # カスタムフック
+│   │   │   ├── lib/            # ユーティリティ関数
+│   │   │   └── pages/          # ページコンポーネント
+│   ├── server/                 # バックエンド関連ファイル
+│   │   ├── index.ts            # サーバーエントリーポイント
+│   │   ├── routes.ts           # APIルート定義
+│   │   ├── storage.ts          # データストレージ
+│   │   ├── paypay.ts           # PayPay API連携
+│   │   └── vite.ts             # Vite開発サーバー設定
+│   └── shared/                 # 共有ファイル
+│       └── schema.ts           # データモデルとZodスキーマ
+├── turbo.json                  # Turborepo設定ファイル
+└── amplify.yml                 # AWS Amplify設定ファイル
 ```
 
 ## 主要ファイル説明
@@ -247,6 +250,138 @@ PAYPAY_REDIRECT_URL=http://localhost:5000/payment/callback
 - メニュー画面では60秒ごとに店舗設定を自動更新（最新の受付状態を反映）
 - パフォーマンス最適化のため、未使用のアニメーションコンポーネントを削除
 - すべてのコードにJSDocコメントを追加してコードリーディングを容易に
+
+## モノレポ構造
+
+このプロジェクトはTurborepoを使用したモノレポ構造を採用しています。モノレポ構造には以下のメリットがあります：
+
+- **コード共有の簡素化**: パッケージ間で型定義やユーティリティを簡単に共有できます
+- **依存関係の一元管理**: すべてのパッケージの依存関係を一箇所で管理できます
+- **ビルドの最適化**: Turborepoのキャッシュ機能により、変更されたパッケージのみをビルドできます
+- **デプロイの柔軟性**: AWS Amplifyなどのサービスで、フロントエンドとバックエンドを別々にデプロイできます
+
+### パッケージ構成
+
+コードは以下のパッケージに分かれています：
+
+- **`packages/client`**: フロントエンドのReactアプリケーション
+  - Viteを使用したビルド設定
+  - TailwindCSSとShadcn UIによるスタイリング
+  - React Query、React Hook Form、Zodによるデータ管理と検証
+  - 環境変数は`.env`ファイルまたはAWS Amplifyの環境変数で設定
+
+- **`packages/server`**: バックエンドのExpressサーバー
+  - RESTful APIエンドポイント
+  - JWT認証とGoogle OAuth連携
+  - PayPay決済API連携
+  - データストレージ（開発環境ではMemStorage、本番環境ではPgStorage）
+  - 環境変数は`.env`ファイルまたはAWS Amplifyの環境変数で設定
+
+- **`packages/shared`**: 共有コード
+  - Zodスキーマ定義
+  - 型定義（TypeScript）
+  - 共通ユーティリティ関数
+
+### モノレポ開発ワークフロー
+
+```bash
+# 全パッケージの依存関係をインストール
+npm install
+
+# 開発サーバーを起動（クライアントとサーバーの両方）
+npm run dev
+
+# ビルド
+npm run build
+
+# 型チェック
+npm run check
+
+# データベースマイグレーション
+npm run db:push
+
+# シードデータ投入
+npm run seed
+```
+
+### 環境変数の設定
+
+モノレポ構造では、環境変数の設定に注意が必要です：
+
+1. **ルートディレクトリ**: プロジェクトのルートディレクトリに`.env`ファイルを配置します
+2. **Turborepo設定**: `turbo.json`の`globalDependencies`に`.env`を追加して、環境変数の変更を検知します
+3. **開発環境**: 開発時は`dotenv`パッケージが`.env`ファイルから環境変数を読み込みます
+4. **本番環境**: AWS Amplifyでは、環境変数を直接設定します
+
+必要な環境変数：
+```
+DATABASE_URL=postgresql://...  # PostgreSQLデータベース接続URL
+JWT_SECRET=...                # JWT認証用シークレット
+GOOGLE_CLIENT_ID=...          # Google OAuth用クライアントID
+GOOGLE_CLIENT_SECRET=...      # Google OAuth用クライアントシークレット
+PAYPAY_API_KEY=...            # PayPay API用キー
+PAYPAY_API_SECRET=...         # PayPay API用シークレット
+PAYPAY_MERCHANT_ID=...        # PayPay API用マーチャントID
+```
+
+### AWS Amplifyデプロイ
+
+このプロジェクトはAWS Amplifyを使用してデプロイするように設定されています。`amplify.yml`ファイルでフロントエンドとバックエンドの両方のビルド設定を定義しています：
+
+```yaml
+version: 1
+applications:
+  - frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm ci
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        baseDirectory: dist/public
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+    appRoot: packages/client
+  - backend:
+      phases:
+        preBuild:
+          commands:
+            - npm ci
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        baseDirectory: dist
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+    appRoot: packages/server
+```
+
+デプロイ手順：
+1. AWS Amplifyコンソールでアプリケーションを作成
+2. GitHubリポジトリと連携
+3. 環境変数を設定（DATABASE_URL、JWT_SECRET、APIキーなど）
+4. デプロイを実行
+
+### トラブルシューティング
+
+**データベース接続エラー**:
+- 環境変数`DATABASE_URL`が正しく設定されているか確認
+- 開発環境では、MemStorageがフォールバックとして機能します
+- 本番環境では、AWS Amplifyコンソールで環境変数を設定してください
+
+**ビルドエラー**:
+- `npm run check`でTypeScriptエラーを確認
+- パッケージ間の依存関係が正しく設定されているか確認
+- インポートパスが正しいか確認（例: `@shared/schema`ではなく`../../shared/schema`）
 
 ## ライセンス
 
