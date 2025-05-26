@@ -1,10 +1,12 @@
 import type { Express, Request, Response } from "express";
-import { storage } from "../storage";
+import { createStorage } from "../storage";
 import jwt from "jsonwebtoken";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import memoryStore from "memorystore";
 import session from "express-session";
+
+const storage = createStorage();
 
 const JWT_SECRET = () => process.env.JWT_SECRET || "campus-order-jwt-secret";
 

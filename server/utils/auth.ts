@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
 import type { Request } from "express";
-import { storage } from "../storage";
+import { createStorage } from "../storage";
+
+const storage = createStorage();
 
 const JWT_SECRET = () => process.env.JWT_SECRET || "campus-order-jwt-secret";
 

@@ -48,8 +48,10 @@ export class MemStorage implements IStorage {
       updatedAt: new Date()
     };
     
-    // Initialize with sample data
-    this.initializeData();
+    // Initialize with sample data - 非同期処理だが、コンストラクタでは待機できないため
+    this.initializeData().catch(err => {
+      console.error('サンプルデータの初期化中にエラーが発生しました:', err);
+    });
   }
   
   // Store settings methods
@@ -66,7 +68,12 @@ export class MemStorage implements IStorage {
     return this.storeSettings;
   }
 
-  private initializeData() {
+  /**
+   * サンプルデータの初期化
+   * 
+   * 非同期メソッドを使用するため、async/awaitパターンを使用します
+   */
+  private async initializeData() {
     // Add sample products
     const sampleProducts: InsertProduct[] = [
       {
@@ -155,7 +162,7 @@ export class MemStorage implements IStorage {
       }
     ];
     
-    sampleProducts.forEach(product => this.addProduct(product));
+    await Promise.all(sampleProducts.map(product => this.addProduct(product)));
     
     // Generate time slots
     // 現在時刻から5分後を最短時間として設定し、10分間隔で時間枠を生成
@@ -166,6 +173,7 @@ export class MemStorage implements IStorage {
     const roundedTime = Math.ceil(fiveMinutesLater / (10 * 60000)) * (10 * 60000);
     
     // 12個の時間枠を生成（2時間分）
+    const timeSlotPromises = [];
     for (let i = 0; i < 12; i++) {
       const slotTime = new Date(roundedTime + i * 10 * 60000);
       const hours = slotTime.getHours();
@@ -177,12 +185,14 @@ export class MemStorage implements IStorage {
       // 初期値として8-10人分の空きがあるようにする
       const available = Math.floor(Math.random() * 3) + 8;
       
-      this.addTimeSlot({
+      timeSlotPromises.push(this.addTimeSlot({
         time,
         capacity,
         available
-      });
+      }));
     }
+    
+    await Promise.all(timeSlotPromises);
   }
 
   // User methods
@@ -218,7 +228,13 @@ export class MemStorage implements IStorage {
     return this.products.get(id);
   }
 
-  private addProduct(insertProduct: InsertProduct): Product {
+  /**
+   * 商品を追加するメソッド
+   * 
+   * @param insertProduct - 追加する商品のデータ
+   * @returns 作成された商品
+   */
+  async addProduct(insertProduct: InsertProduct): Promise<Product> {
     const id = randomUUID();
     const product = { ...insertProduct, id };
     this.products.set(id, product);

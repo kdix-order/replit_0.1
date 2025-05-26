@@ -8,7 +8,7 @@ export { IStorage, MemStorage, PgStorage };
  * テスト環境用のシングルトンインスタンス
  * テスト間でストレージを共有するために使用
  */
-let testStorageInstance: IStorage | null = null;
+let testStorageInstance: IStorage | undefined = undefined;
 
 /**
  * ストレージファクトリ関数
