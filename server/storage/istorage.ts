@@ -49,4 +49,8 @@ export interface IStorage {
     // Store settings methods
     getStoreSettings(): Promise<StoreSetting>;
     updateStoreSettings(acceptingOrders: boolean): Promise<StoreSetting>;
+    
+    // Call number methods
+    getNextCallNumber(): Promise<number>;
+    resetCallNumber(seed?: number): void;
 }

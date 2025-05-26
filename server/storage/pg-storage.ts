@@ -247,6 +247,14 @@ export class PgStorage implements IStorage {
         .returning();
     return result;
   }
+
+  async getNextCallNumber(): Promise<number> {
+    throw new Error("getNextCallNumber not implemented for PgStorage");
+  }
+
+  resetCallNumber(seed: number = 300): void {
+    console.warn("resetCallNumber not implemented for PgStorage");
+  }
 }
 
 export const storage = new PgStorage();

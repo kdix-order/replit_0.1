@@ -404,6 +404,15 @@ export class MemStorage implements IStorage {
     // 現在の番号を返し、カウンターをインクリメント
     return this.callNumberCounter++;
   }
+  
+  /**
+   * 呼出番号カウンターをリセットするメソッド（テスト用）
+   * 
+   * @param seed - リセット後の開始値（デフォルト: 300）
+   */
+  resetCallNumber(seed: number = 300): void {
+    this.callNumberCounter = seed;
+  }
 
   // Feedback methods
   async createFeedback(insertFeedback: InsertFeedback): Promise<Feedback> {
