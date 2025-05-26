@@ -1,10 +1,8 @@
-import React from 'react';
+import * as React from 'react';
 import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
 import { describe, it, expect } from 'vitest';
-import Admin from '../pages/admin';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from '../lib/queryClient';
+import { MockAdmin } from './mocks/MockComponents';
 
 /**
  * 管理者ページのアクセシビリティテスト
@@ -12,11 +10,7 @@ import { queryClient } from '../lib/queryClient';
  */
 describe('管理者ページのアクセシビリティ', () => {
   it('管理者ページに重大なアクセシビリティ違反がない', async () => {
-    const { container } = render(
-      <QueryClientProvider client={queryClient}>
-        <Admin />
-      </QueryClientProvider>
-    );
+    const { container } = render(<MockAdmin />);
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });

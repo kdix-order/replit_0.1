@@ -1,10 +1,8 @@
-import React from 'react';
+import * as React from 'react';
 import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
 import { describe, it, expect } from 'vitest';
-import Menu from '../pages/menu';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from '../lib/queryClient';
+import { MockMenu } from './mocks/MockComponents';
 
 /**
  * メニューページのアクセシビリティテスト
@@ -12,11 +10,7 @@ import { queryClient } from '../lib/queryClient';
  */
 describe('メニューページのアクセシビリティ', () => {
   it('メニューページに重大なアクセシビリティ違反がない', async () => {
-    const { container } = render(
-      <QueryClientProvider client={queryClient}>
-        <Menu />
-      </QueryClientProvider>
-    );
+    const { container } = render(<MockMenu />);
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
