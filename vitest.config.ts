@@ -6,7 +6,19 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     clearMocks: true,
-    setupFiles: ['./server/__tests__/setup.ts'], // テストセットアップファイル
+    setupFiles: [
+      './server/__tests__/setup.ts', // サーバーテストセットアップファイル
+      './vitest.setup.ts',           // アクセシビリティテストセットアップファイル
+    ],
+    include: [
+      'server/**/*.{test,spec}.{ts,tsx}',
+      'client/src/**/*.{test,spec}.{ts,tsx}',
+      'client/src/__tests__/**/*.{test,spec}.{ts,tsx}',
+    ],
+    environmentMatchGlobs: [
+      ['client/**/*.{test,spec}.{ts,tsx}', 'jsdom'],
+      ['client/__tests__/**/*.{test,spec}.{ts,tsx}', 'jsdom'],
+    ],
   },
   resolve: {
     alias: {
