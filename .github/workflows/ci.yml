@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, devin/1748258161-add-cicd-testing ]
   pull_request:
     branches: [ main ]
 
