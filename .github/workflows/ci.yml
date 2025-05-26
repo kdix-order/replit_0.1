@@ -22,7 +22,7 @@ jobs:
       - name: ESLint
         run: npm run lint
       - name: TypeScript Check
-        run: npm run typecheck
+        run: npm run check
 
   # 2. 単体・統合・アクセシビリティテスト
   test:
@@ -39,7 +39,7 @@ jobs:
       - name: Run Tests
         run: npm run test:unit
 
-  # 3. E2E テスト（Playwright）
+  # 3. E2E テスト
   e2e:
     name: E2E Tests
     needs: test

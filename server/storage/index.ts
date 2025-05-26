@@ -1,6 +1,6 @@
 import { MemStorage } from './mem-storage';
 import { PgStorage } from './pg-storage';
-import { IStorage } from './istorage';
+import type { IStorage } from './istorage';
 
 export { IStorage, MemStorage, PgStorage };
 
@@ -24,6 +24,6 @@ export function createStorage(): IStorage {
     }
     return testStorageInstance;
   } else {
-    return new PgStorage();  // 本番環境では201から開始
+    return process.env.DATABASE_URL ? new PgStorage() : new MemStorage();  // 本番環境では201から開始
   }
 }
