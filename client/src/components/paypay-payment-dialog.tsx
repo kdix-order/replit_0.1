@@ -3,7 +3,6 @@
  * PayPay APIを使用したモバイル決済機能を提供します
  * QRコード表示や、決済状態の処理、成功/失敗の表示を含みます
  */
-import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,9 +12,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
-import { FoodSpinner, BouncingFoodSpinner } from "@/components/ui/food-spinner";
 import { usePayPay } from '@/hooks/use-paypay';
 
 /**
