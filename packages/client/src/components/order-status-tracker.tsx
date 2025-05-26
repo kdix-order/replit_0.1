@@ -10,7 +10,7 @@ import { CheckCircle, Clock, ChefHat } from "lucide-react"; // アイコンコ�
 /**
  * OrderStatusTrackerのプロパティ型定義
  * 
- * @property status - 現在の注文ステータス（"new":新規注文, "preparing":調理中, "completed":完了）
+ * @property status - 現在の注文ステータス（"new":新規注文, "paid":支払い済み, "preparing":調理中, "completed":完了）
  */
 type OrderStatusTrackerProps = {
   status: "new" | "paid" | "preparing" | "completed";
