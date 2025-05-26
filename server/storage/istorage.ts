@@ -2,7 +2,7 @@ import type {
     CartItem,
     CartItemWithProduct, Feedback,
     InsertCartItem, InsertFeedback, InsertOrder,
-    InsertUser, Order, OrderWithTimeSlot,
+    InsertTimeSlot, InsertUser, Order, OrderWithTimeSlot,
     Product, StoreSetting, TimeSlot,
     TimeSlotWithAvailability,
     User
@@ -31,6 +31,7 @@ export interface IStorage {
     getTimeSlots(): Promise<TimeSlotWithAvailability[]>;
     getTimeSlot(id: string): Promise<TimeSlot | undefined>;
     updateTimeSlotAvailability(id: string, available: number): Promise<TimeSlot | undefined>;
+    addTimeSlot(insertTimeSlot: InsertTimeSlot): Promise<TimeSlot>;
 
     // Order methods
     createOrder(order: InsertOrder): Promise<Order>;

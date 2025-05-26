@@ -9,6 +9,7 @@
  * - 注文処理のエンドポイント
  * - 管理者向けエンドポイント
  * - フィードバック機能のエンドポイント
+ * - ヘルスチェック機能
  */
 
 import type { Express, Request, Response } from "express";
@@ -19,6 +20,7 @@ import admin from "./routes/admin";
 import auth from "./routes/auth";
 import cart from "./routes/cart";
 import feedback from "./routes/feedback";
+import health from "./routes/health";
 import orders from "./routes/orders";
 import payments from "./routes/payments";
 import products from "./routes/products";
@@ -49,6 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/", auth);
   app.use("/", cart);
   app.use("/", feedback);
+  app.use("/", health);
   app.use("/", orders);
   app.use("/", payments);
   app.use("/", products);

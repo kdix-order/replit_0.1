@@ -317,7 +317,13 @@ export class MemStorage implements IStorage {
     return updatedSlot;
   }
 
-  private addTimeSlot(insertTimeSlot: InsertTimeSlot): TimeSlot {
+  /**
+   * タイムスロットを追加するメソッド
+   * 
+   * @param insertTimeSlot - 追加するタイムスロットのデータ
+   * @returns 作成されたタイムスロット
+   */
+  async addTimeSlot(insertTimeSlot: InsertTimeSlot): Promise<TimeSlot> {
     const id = randomUUID();
     const timeSlot = { ...insertTimeSlot, id };
     this.timeSlots.set(id, timeSlot);
