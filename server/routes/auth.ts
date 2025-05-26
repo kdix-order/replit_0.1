@@ -79,7 +79,7 @@ router.post("/api/auth/customer-demo-login", async (req, res) => {
 
 router.get("/api/auth/me", isAuthenticated, async (req, res) => {
   try {
-    const user = await storage.getUser(req.user.id);
+    const user = await storage.getUser(req.user!.id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }

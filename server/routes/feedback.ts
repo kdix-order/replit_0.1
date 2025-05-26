@@ -26,7 +26,7 @@ router.post("/api/feedback", isAuthenticated, async (req, res) => {
 
     const validatedData = schema.parse({
       ...req.body,
-      userId: req.user.id,
+      userId: req.user!.id,
     });
 
     // Check if order exists if orderId is provided
@@ -37,7 +37,7 @@ router.post("/api/feedback", isAuthenticated, async (req, res) => {
       }
 
       // Check if user owns the order
-      if (order.userId !== req.user.id) {
+      if (order.userId !== req.user!.id) {
         return res.status(403).json({ message: "Forbidden" });
       }
 
@@ -63,7 +63,7 @@ router.post("/api/feedback", isAuthenticated, async (req, res) => {
 // Get user's feedback
 router.get("/api/feedback", isAuthenticated, async (req, res) => {
   try {
-    const feedback = await storage.getFeedbackByUserId(req.user.id);
+    const feedback = await storage.getFeedbackByUserId(req.user!.id);
     res.json(feedback);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
@@ -82,7 +82,7 @@ router.get("/api/feedback/order/:id", isAuthenticated, async (req, res) => {
     }
 
     // Check if user owns the order
-    if (order.userId !== req.user.id && !await isAdminUser(req)) {
+    if (order.userId !== req.user!.id && !await isAdminUser(req)) {
       return res.status(403).json({ message: "Forbidden" });
     }
 

@@ -13,7 +13,7 @@ const router = express.Router();
 // ユーザーのカートアイテム取得
 router.get("/api/cart", isAuthenticated, async (req, res) => {
   try {
-    const cartItems = await storage.getCartItems(req.user.id);
+    const cartItems = await storage.getCartItems(req.user!.id);
     res.json(cartItems);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
@@ -31,7 +31,7 @@ router.post("/api/cart", isAuthenticated, async (req, res) => {
 
     const validatedData = schema.parse({
       ...req.body,
-      userId: req.user.id,
+      userId: req.user!.id,
     });
 
     const cartItem = await storage.addToCart(validatedData);

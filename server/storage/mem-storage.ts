@@ -428,7 +428,11 @@ export class MemStorage implements IStorage {
   
   async getAllFeedback(): Promise<Feedback[]> {
     return Array.from(this.feedbacks.values())
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort((a, b) => {
+        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(0);
+        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      });
   }
 }
 

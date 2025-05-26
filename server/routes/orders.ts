@@ -23,7 +23,7 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
     }
 
     // Get cart items
-    const cartItems = await storage.getCartItems(req.user.id);
+    const cartItems = await storage.getCartItems(req.user!.id);
 
     if (cartItems.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
@@ -47,7 +47,7 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
 
     // Create order
     const order = await storage.createOrder({
-      userId: req.user.id,
+      userId: req.user!.id,
       status: "new",
       total,
       timeSlotId,
@@ -75,7 +75,7 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
 
 router.get("/api/orders", isAuthenticated, async (req, res) => {
   try {
-    const orders = await storage.getOrdersByUser(req.user.id);
+    const orders = await storage.getOrdersByUser(req.user!.id);
     res.json(orders.map(o => ({ ...o, callNumber: (o.callNumber % 99) + 201 })));
   } catch (error) {
     res.status(500).json({ message: "Server error" });
@@ -89,7 +89,7 @@ router.get("/api/orders/:id", isAuthenticated, async (req, res) => {
     const { id } = req.params;
 
     // 全注文を取得してIdでフィルタリング
-    const userOrders = await storage.getOrdersByUser(req.user.id);
+    const userOrders = await storage.getOrdersByUser(req.user!.id);
     const order = userOrders.find(o => o.id === id);
 
     if (!order) {

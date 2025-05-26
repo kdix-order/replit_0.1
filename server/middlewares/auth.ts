@@ -28,7 +28,7 @@ export const isAuthenticated = (req: Request, res: Response, next: any) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET()) as { userId: number };
+    const decoded = jwt.verify(token, JWT_SECRET()) as { userId: string };
     // 必ずuser情報をセットする
     req.user = { id: decoded.userId };
     next();
@@ -68,7 +68,7 @@ export const configurePassport = (app: Express) => {
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id: number, done) => {
+  passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await storage.getUser(id);
       done(null, user);
