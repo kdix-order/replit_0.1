@@ -4,9 +4,17 @@ import { resolve } from 'path';
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'jsdom',          // ブラウザ環境をエミュレート
     clearMocks: true,
-    setupFiles: ['./server/__tests__/setup.ts'], // テストセットアップファイル
+    setupFiles: [
+      './server/__tests__/setup.ts', // サーバーテストセットアップファイル
+      './vitest.setup.ts',           // アクセシビリティテストセットアップファイル
+    ],
+    include: [
+      'server/**/*.{test,spec}.{ts,tsx}',
+      'client/src/**/*.{test,spec}.{ts,tsx}',
+      'client/src/__tests__/**/*.{test,spec}.{ts,tsx}',
+    ],
   },
   resolve: {
     alias: {
