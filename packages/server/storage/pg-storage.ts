@@ -22,19 +22,39 @@ import {
   products,
   storeSettings,
   timeSlots,
-} from "@shared/schema";
+} from "../../shared/schema";
 import { IStorage } from "./istorage";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { and, eq } from "drizzle-orm";
 import dotenv from "dotenv";
-import { randomUUID } from "crypto";
 
 export class PgStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
 
-  constructor() {
-    dotenv.config();
-    this.db = drizzle(process.env.DATABASE_URL!);
+  constructor(db?: ReturnType<typeof drizzle>) {
+    if (db) {
+      this.db = db;
+      console.log("Using provided database connection");
+    } else {
+      dotenv.config(); // Try current directory
+      dotenv.config({ path: '../../.env' }); // Try root directory
+      dotenv.config({ path: '../../../.env' }); // Try another level up
+      
+      console.log("DATABASE_URL:", process.env.DATABASE_URL ? "exists" : "undefined");
+      
+      if (!process.env.DATABASE_URL) {
+        console.error("DATABASE_URL is undefined. Cannot connect to database.");
+        throw new Error("DATABASE_URL is undefined");
+      }
+      
+      try {
+        this.db = drizzle(process.env.DATABASE_URL);
+        console.log("Database connection initialized successfully");
+      } catch (error) {
+        console.error("Failed to initialize database connection:", error);
+        throw error;
+      }
+    }
   }
 
   async addToCart(item: InsertCartItem): Promise<CartItem> {
@@ -248,5 +268,3 @@ export class PgStorage implements IStorage {
     return result;
   }
 }
-
-export const storage = new PgStorage();
