@@ -5,15 +5,18 @@
  * このテストファイルでは、Supertestを使用して
  * POST /api/ordersエンドポイントの動作を検証します。
  * 認証が必要なエンドポイントのテスト方法も示しています。
+ * 
+ * 注意: テスト環境では同一のストレージインスタンスを使用するため、
+ * モジュールのリセットとインポートの順序が重要です。
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import request from 'supertest';
-import { app, initializeApp } from '../index';
-import { Server } from 'http';
 import jwt from 'jsonwebtoken';
-import { storage } from '../storage';
+import type { IStorage } from '../storage';
+import { Server } from 'http';
 
+process.env.NODE_ENV = 'test';
 const JWT_SECRET = process.env.JWT_SECRET || 'campus-order-jwt-secret';
 
 describe('注文API', () => {
@@ -21,8 +24,18 @@ describe('注文API', () => {
   let authToken: string;
   let testUserId: string;
   let testTimeSlotId: string;
+  let storage: IStorage;
+  let app: any;
 
   beforeAll(async () => {
+    vi.resetModules();
+    
+    const { createStorage } = await import('../storage');
+    storage = createStorage();
+    
+    const { app: expressApp, initializeApp } = await import('../index');
+    app = expressApp;
+    
     const result = await initializeApp();
     server = result.server;
 
@@ -46,6 +59,18 @@ describe('注文API', () => {
         available: 10
       });
       testTimeSlotId = newTimeSlot.id;
+    }
+    
+    const products = await storage.getProducts();
+    if (products.length === 0) {
+      await storage.addProduct({
+        id: 'test-product-1',
+        name: 'テスト商品',
+        description: 'テスト用の商品です',
+        price: 500,
+        image: 'test.jpg',
+        category: 'test'
+      });
     }
   });
 
@@ -87,14 +112,17 @@ describe('注文API', () => {
       throw new Error('テスト用の商品がありません');
     }
 
-    await storage.addToCart({
+    const cartItem = await storage.addToCart({
       userId: testUserId,
       productId: products[0].id,
       quantity: 1,
       size: '並',
       customizations: []
     });
-
+    
+    const cartItems = await storage.getCartItems(testUserId);
+    expect(cartItems.length).toBe(1);
+    
     const response = await request(app)
       .post('/api/orders')
       .set('Authorization', `Bearer ${authToken}`)

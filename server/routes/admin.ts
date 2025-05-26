@@ -4,8 +4,10 @@
 
 import express, { type Request, type Response } from "express";
 import { isAdmin, isAuthenticated } from "../middlewares/auth";
-import { storage } from "../storage";
+import { createStorage } from "../storage";
 import { isAdminUser } from "../utils/auth";
+
+const storage = createStorage();
 
 const router = express.Router();
 

@@ -3,8 +3,9 @@
  ***********************************/
 
 import express from "express";
-import { storage } from "../storage";
+import { createStorage } from "../storage";
 
+const storage = createStorage();
 const router = express.Router();
 
 // 利用可能な時間枠一覧を取得

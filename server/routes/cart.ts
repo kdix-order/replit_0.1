@@ -4,10 +4,11 @@
 
 import express from "express";
 import { isAuthenticated } from "../middlewares/auth";
-import { storage } from "../storage";
+import { createStorage } from "../storage";
 import { insertCartItemSchema } from "@shared/schema";
 import { z } from "zod";
 
+const storage = createStorage();
 const router = express.Router();
 
 // ユーザーのカートアイテム取得

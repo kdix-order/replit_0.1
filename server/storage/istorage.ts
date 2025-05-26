@@ -1,13 +1,17 @@
 import type {
     CartItem,
     CartItemWithProduct, Feedback,
-    InsertCartItem, InsertFeedback, InsertOrder,
+    InsertCartItem, InsertFeedback, InsertOrder, InsertProduct,
     InsertTimeSlot, InsertUser, Order, OrderWithTimeSlot,
     Product, StoreSetting, TimeSlot,
     TimeSlotWithAvailability,
     User
 } from "@shared/schema";
 
+/**
+ * ストレージインターフェース
+ * データアクセス層の共通インターフェースを定義します
+ */
 export interface IStorage {
     // User methods
     getUser(id: string): Promise<User | undefined>;
@@ -18,6 +22,7 @@ export interface IStorage {
     // Product methods
     getProducts(): Promise<Product[]>;
     getProduct(id: string): Promise<Product | undefined>;
+    addProduct(product: InsertProduct): Promise<Product>;
 
     // Cart methods
     getCartItems(userId: string): Promise<CartItemWithProduct[]>;
@@ -52,5 +57,4 @@ export interface IStorage {
     
     // Call number methods
     getNextCallNumber(): Promise<number>;
-    resetCallNumber(seed?: number): void;
 }

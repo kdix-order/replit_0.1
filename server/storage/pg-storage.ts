@@ -32,7 +32,12 @@ import { randomUUID } from "crypto";
 export class PgStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
 
-  constructor() {
+  /**
+   * PgStorageクラスのコンストラクタ
+   * 
+   * @param startCallNumber - 呼出番号の開始値（デフォルト: 201）
+   */
+  constructor(startCallNumber: number = 201) {
     dotenv.config();
     this.db = drizzle(process.env.DATABASE_URL!);
   }
@@ -252,9 +257,5 @@ export class PgStorage implements IStorage {
     throw new Error("getNextCallNumber not implemented for PgStorage");
   }
 
-  resetCallNumber(seed: number = 300): void {
-    console.warn("resetCallNumber not implemented for PgStorage");
-  }
+  // resetCallNumberメソッドを削除 - テスト分離のためにコンストラクタパラメータを使用
 }
-
-export const storage = new PgStorage();

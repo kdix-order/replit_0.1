@@ -6,8 +6,10 @@ import express from "express";
 import { isAuthenticated } from "../middlewares/auth";
 import { insertFeedbackSchema } from "@shared/schema";
 import { z } from "zod";
-import { storage } from "../storage";
+import { createStorage } from "../storage";
 import { isAdminUser } from "../utils/auth";
+
+const storage = createStorage();
 
 const router = express.Router();
 

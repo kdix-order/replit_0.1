@@ -5,8 +5,10 @@
 import express from "express";
 import passport from "passport";
 import { generateToken } from "../utils/auth";
-import { storage } from "../storage";
+import { createStorage } from "../storage";
 import { isAuthenticated } from "../middlewares/auth";
+
+const storage = createStorage();
 
 const router = express.Router();
 

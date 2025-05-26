@@ -4,8 +4,9 @@
 
 import express from "express";
 import { isAuthenticated } from "../middlewares/auth";
-import { storage } from "../storage";
+import { createStorage } from "../storage";
 
+const storage = createStorage();
 const router = express.Router();
 
 // 新規注文の作成
@@ -41,7 +42,7 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
     }
 
     // Calculate total
-    const total = cartItems.reduce((sum, item) => {
+    const total = cartItems.reduce((sum: number, item: any) => {
       return sum + (item.quantity * item.product.price);
     }, 0);
 
@@ -51,7 +52,7 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
       status: "new",
       total,
       timeSlotId,
-      items: cartItems.map(item => ({
+      items: cartItems.map((item: any) => ({
         id: item.productId,
         name: item.product.name,
         price: item.product.price,
@@ -76,7 +77,7 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
 router.get("/api/orders", isAuthenticated, async (req, res) => {
   try {
     const orders = await storage.getOrdersByUser(req.user!.id);
-    res.json(orders.map(o => ({ ...o, callNumber: (o.callNumber % 99) + 201 })));
+    res.json(orders.map((o: any) => ({ ...o, callNumber: (o.callNumber % 99) + 201 })));
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
@@ -90,7 +91,7 @@ router.get("/api/orders/:id", isAuthenticated, async (req, res) => {
 
     // 全注文を取得してIdでフィルタリング
     const userOrders = await storage.getOrdersByUser(req.user!.id);
-    const order = userOrders.find(o => o.id === id);
+    const order = userOrders.find((o: any) => o.id === id);
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });

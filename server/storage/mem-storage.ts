@@ -22,7 +22,12 @@ export class MemStorage implements IStorage {
   private callNumberCounter: number;
   private feedbackIdCounter: number;
 
-  constructor() {
+  /**
+   * MemStorageクラスのコンストラクタ
+   * 
+   * @param startCallNumber - 呼出番号の開始値（デフォルト: 201）
+   */
+  constructor(startCallNumber: number = 201) {
     this.users = new Map();
     this.products = new Map();
     this.cartItems = new Map();
@@ -30,11 +35,9 @@ export class MemStorage implements IStorage {
     this.orders = new Map();
     this.feedbacks = new Map();
 
-    // 呼出番号カウンターの初期化 - 201から始まる三桁の番号システム
+    // 呼出番号カウンターの初期化 - コンストラクタパラメータで開始値を指定可能
     // マクドナルドのような呼出番号システム（201〜300で循環）
-    // 【編集方法】: 別の範囲を使用したい場合は、この値とgetNextCallNumber()メソッドの
-    // リセット条件を合わせて変更してください
-    this.callNumberCounter = 201; // 呼出番号の開始値（201）
+    this.callNumberCounter = startCallNumber;
     
     this.feedbackIdCounter = 1;
     
@@ -405,14 +408,7 @@ export class MemStorage implements IStorage {
     return this.callNumberCounter++;
   }
   
-  /**
-   * 呼出番号カウンターをリセットするメソッド（テスト用）
-   * 
-   * @param seed - リセット後の開始値（デフォルト: 300）
-   */
-  resetCallNumber(seed: number = 300): void {
-    this.callNumberCounter = seed;
-  }
+  // resetCallNumberメソッドを削除 - テスト分離のためにコンストラクタパラメータを使用
 
   // Feedback methods
   async createFeedback(insertFeedback: InsertFeedback): Promise<Feedback> {
@@ -450,5 +446,3 @@ export class MemStorage implements IStorage {
       });
   }
 }
-
-export const storage = new MemStorage();
