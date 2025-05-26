@@ -10,7 +10,9 @@ const __dirname = dirname(__filename);
 
 export default defineConfig({
   plugins: [
-    react(),
+    react({
+      jsxImportSource: "react",
+    }),
     runtimeErrorOverlay(),
     themePlugin(),
     ...(process.env.NODE_ENV !== "production" &&
