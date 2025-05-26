@@ -1,0 +1,8 @@
+export GOOGLE_CLIENT_ID="your_google_client_id_here"
+export GOOGLE_CLIENT_SECRET="your_google_client_secret_here"
+# PayPay API設定
+export PAYPAY_API_KEY="your_paypay_api_key_here"
+export PAYPAY_API_SECRET="your_paypay_api_secret_here"
+export PAYPAY_MERCHANT_ID="your_paypay_merchant_id_here"
+export JWT_SECRET="your_jwt_secret_here"  # ランダムな文字列を設定してください
+export DATABASE_URL="postgresql://user:password@host:port/database?sslmode=require"

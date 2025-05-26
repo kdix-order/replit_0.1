@@ -1,2 +1,27 @@
 # node_modulesディレクトリを指定する
 node_modules/
+
+# 環境変数ファイル（APIキーなどの機密情報を含む）
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.envrc
+
+# ビルド成果物
+dist/
+build/
+
+# ログファイル
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# エディタ設定
+.vscode/
+.idea/
+*.swp
+*.swo
