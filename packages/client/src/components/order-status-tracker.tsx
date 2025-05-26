@@ -27,32 +27,13 @@ export function OrderStatusTracker({ status }: OrderStatusTrackerProps) {
    * アニメーション完了状態を管理するステート
    * 各ステップのアニメーション完了状態を保持します
    */
-  const [animationComplete, setAnimationComplete] = useState({
-    toNew: false,       // 新規注文ステップのアニメーション完了状態
-    toPaid: false,      // 支払いステップのアニメーション完了状態
-    toPreparing: false, // 調理中ステップのアニメーション完了状態
-    toCompleted: false, // 完了ステップのアニメーション完了状態
-  });
+// Removed unused animationComplete state
 
   /**
    * ステータスが変更されたときのアニメーション状態を更新する効果
    * 現在のステータスに応じて、アニメーション完了状態を設定します
    */
-  useEffect(() => {
-    if (status === "new") {
-      // 新規注文のみ完了
-      setAnimationComplete({ toNew: true, toPaid: false, toPreparing: false, toCompleted: false });
-    } else if (status === "paid") {
-      // 新規注文と支払いまで完了
-      setAnimationComplete({ toNew: true, toPaid: true, toPreparing: false, toCompleted: false });
-    } else if (status === "preparing") {
-      // 新規注文と調理中まで完了
-      setAnimationComplete({ toNew: true, toPaid: true, toPreparing: true, toCompleted: false });
-    } else if (status === "completed") {
-      // すべてのステップ完了
-      setAnimationComplete({ toNew: true, toPaid: true, toPreparing: true, toCompleted: true });
-    }
-  }, [status]);
+// Removed unused useEffect for animationComplete state
 
   /**
    * 各ステップが「アクティブ」か「非アクティブ」かを判定する関数
