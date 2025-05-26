@@ -3,7 +3,9 @@ import { resolve } from 'path';
 
 export default defineConfig({
   test: {
+    globals: true,
     environment: 'node',
+    clearMocks: true,
     setupFiles: ['./server/__tests__/setup.ts'], // テストセットアップファイル
   },
   resolve: {

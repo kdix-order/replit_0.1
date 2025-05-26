@@ -4,10 +4,12 @@
  * 
  * このファイルは、テスト実行前に環境変数を設定し、
  * テスト用のデータベース接続などを初期化します。
+ * また、Nockの設定も行います。
  */
 
 import { afterAll } from 'vitest';
 import dotenv from 'dotenv';
+import nock from 'nock';
 
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret';
@@ -15,4 +17,6 @@ process.env.JWT_SECRET = 'test-jwt-secret';
 dotenv.config();
 
 afterAll(() => {
+  nock.cleanAll();
+  nock.restore();
 });
