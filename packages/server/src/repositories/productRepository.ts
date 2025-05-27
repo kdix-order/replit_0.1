@@ -5,9 +5,9 @@
  * IStorageインターフェースをラップして、商品ドメイン特化のメソッドを提供します。
  */
 
-import { storage } from "../../storage";
 import type { IStorage } from "../../storage/istorage";
 import { Product } from "../models";
+import { storage } from "../../storage/index";
 
 /**
  * 商品リポジトリクラス
@@ -38,4 +38,4 @@ export class ProductRepository {
   }
 }
 
-export const productRepository = new ProductRepository(storage as IStorage);
+export const productRepository = new ProductRepository(storage);

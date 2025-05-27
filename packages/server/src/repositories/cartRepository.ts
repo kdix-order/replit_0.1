@@ -5,11 +5,13 @@
  * IStorageインターフェースをラップして、カートドメイン特化のメソッドを提供します。
  */
 
-import { storage } from "../../storage";
 import type { IStorage } from "../../storage/istorage";
 import { 
-  CartItemWithProduct 
+  CartItem,
+  CartItemWithProduct,
+  InsertCartItem
 } from "../models";
+import { storage } from "../../storage/index";
 
 /**
  * カートリポジトリクラス
@@ -21,6 +23,7 @@ export class CartRepository {
   constructor(storage: IStorage) {
     this.storage = storage;
   }
+
   /**
    * ユーザーのカートアイテムを取得します
    * @param userId ユーザーID
@@ -28,6 +31,43 @@ export class CartRepository {
    */
   async getCartItems(userId: string): Promise<CartItemWithProduct[]> {
     return this.storage.getCartItems(userId);
+  }
+
+  /**
+   * 特定のカートアイテムを取得します
+   * @param userId ユーザーID
+   * @param productId 商品ID
+   * @returns カートアイテム、存在しない場合はundefined
+   */
+  async getCartItem(userId: string, productId: string): Promise<CartItem | undefined> {
+    return this.storage.getCartItem(userId, productId);
+  }
+
+  /**
+   * カートに商品を追加します
+   * @param item 追加するカートアイテム
+   * @returns 追加されたカートアイテム
+   */
+  async addToCart(item: InsertCartItem): Promise<CartItem> {
+    return this.storage.addToCart(item);
+  }
+
+  /**
+   * カートアイテムの数量を更新します
+   * @param id カートアイテムID
+   * @param quantity 新しい数量
+   * @returns 更新されたカートアイテム、存在しない場合はundefined
+   */
+  async updateCartItemQuantity(id: string, quantity: number): Promise<CartItem | undefined> {
+    return this.storage.updateCartItemQuantity(id, quantity);
+  }
+
+  /**
+   * カートアイテムを削除します
+   * @param id カートアイテムID
+   */
+  async deleteCartItem(id: string): Promise<void> {
+    return this.storage.deleteCartItem(id);
   }
 
   /**
@@ -39,4 +79,4 @@ export class CartRepository {
   }
 }
 
-export const cartRepository = new CartRepository(storage as IStorage);
+export const cartRepository = new CartRepository(storage);

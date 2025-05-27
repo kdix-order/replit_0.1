@@ -6,4 +6,41 @@
  * 必要に応じて追加のビジネスモデルを定義します。
  */
 
-export * from "../../../shared/schema";
+import {
+  User,
+  InsertUser,
+  Product,
+  Order,
+  CartItem,
+  CartItemWithProduct,
+  InsertCartItem,
+  Feedback,
+  StoreSetting,
+  TimeSlot,
+  AuthResponse as SharedAuthResponse
+} from "../../../shared/schema";
+
+export interface AuthResponse extends SharedAuthResponse {}
+
+export type { 
+  User,
+  InsertUser,
+  Product,
+  Order,
+  CartItem,
+  CartItemWithProduct,
+  InsertCartItem,
+  Feedback,
+  StoreSetting,
+  TimeSlot
+};
+
+import { z } from "zod";
+
+export const insertCartItemSchema = z.object({
+  userId: z.string(),
+  productId: z.string(),
+  quantity: z.number().int().positive(),
+  options: z.record(z.any()).optional().default({}),
+  addedAt: z.string().optional().default(() => new Date().toISOString())
+});
