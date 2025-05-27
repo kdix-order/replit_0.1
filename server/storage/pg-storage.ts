@@ -28,6 +28,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { and, eq } from "drizzle-orm";
 import dotenv from "dotenv";
 import { randomUUID } from "crypto";
+import { Client } from "pg";
 
 export class PgStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
@@ -39,7 +40,8 @@ export class PgStorage implements IStorage {
    */
   constructor(startCallNumber: number = 201) {
     dotenv.config();
-    this.db = drizzle(process.env.DATABASE_URL!);
+    const client = new Client(process.env.DATABASE_URL!);
+    this.db = drizzle(client);
   }
 
   async addToCart(item: InsertCartItem): Promise<CartItem> {
