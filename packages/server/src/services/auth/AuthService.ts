@@ -10,7 +10,12 @@ import { User, InsertUser, AuthResponse } from "../../models";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
-const JWT_SECRET = () => process.env.JWT_SECRET || "campus-order-jwt-secret";
+const JWT_SECRET = () => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET environment variable is not defined. Please set it before starting the application.");
+  }
+  return process.env.JWT_SECRET;
+};
 
 /**
  * 認証サービスクラス
