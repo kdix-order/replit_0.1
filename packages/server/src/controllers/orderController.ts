@@ -42,7 +42,7 @@ export class OrderController {
         return;
       }
       
-      const order = await orderService.createOrder(req.user!.id, timeSlotId);
+      const order = await orderService.createOrder(req.user!.id, timeSlotId, paymentMethod);
       
       const timeSlot = await orderRepository.getTimeSlot(order.timeSlotId);
       
