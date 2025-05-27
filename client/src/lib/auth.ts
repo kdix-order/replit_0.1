@@ -35,10 +35,10 @@ export const getUserFromToken = (): any => {
     // This is a simplified version
     // In a real app, you'd decode the JWT token
     // but for now we'll just get the user via an API call
-    return null;
   } catch (error) {
-    return null;
+    console.error('トークンの解析中にエラーが発生しました:', error);
   }
+  return null;
 };
 
 // Parse a token from URL query params (used after OAuth redirect)

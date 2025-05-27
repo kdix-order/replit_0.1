@@ -25,7 +25,7 @@ import { useFeedback } from "@/hooks/use-feedback";
 import { Switch } from "@/components/ui/switch";
 import { OrderStatusTracker } from "@/components/order-status-tracker";
 
-type OrderItem = {
+type OrderItemType = {
   id: string;
   name: string;
   price: number;
@@ -45,7 +45,7 @@ type Order = {
     time: string;
   };
   createdAt: string;
-  items: OrderItem[];
+  items: OrderItemType[];
 };
 
 const statusLabels = {
@@ -107,7 +107,7 @@ function OrderItem({
                 </Badge>
               </div>
               <div className="text-sm text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap">
-                {order.items.slice(0, 1).map((item: OrderItem) => (
+                {order.items.slice(0, 1).map((item: OrderItemType) => (
                   <span key={item.id}>
                     {item.name}
                     {item.size && <span className="text-xs text-gray-500"> ({item.size})</span>}
@@ -163,7 +163,7 @@ function OrderItem({
           <div className="bg-gray-50 rounded-lg p-3 mb-4">
             <h4 className="font-medium mb-2 text-gray-700">注文内容</h4>
             <div className="space-y-2">
-              {order.items.map((item: OrderItem, index: number) => (
+              {order.items.map((item: OrderItemType, index: number) => (
                 <div key={index} className="bg-white p-2 rounded-md border border-gray-100">
                   <div className="flex justify-between items-center">
                     <div className="font-medium">{item.name}</div>
@@ -179,7 +179,7 @@ function OrderItem({
                           {item.size}
                         </span>
                       )}
-                      {item.customizations && item.customizations.map((customization, idx) => (
+                      {item.customizations && item.customizations.map((customization: string, idx: number) => (
                         <span key={idx} className="text-xs bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
                           {getCustomizationLabel(customization)}
                         </span>
@@ -562,7 +562,7 @@ export default function Admin() {
                   <Switch 
                     id="accepting-orders"
                     checked={isAcceptingOrders}
-                    onCheckedChange={async (checked) => {
+                    onCheckedChange={async (checked: boolean) => {
                       try {
                         console.log(`Request to change accepting orders to: ${checked}`);
                         await updateStoreSettings(checked);
@@ -821,7 +821,7 @@ export default function Admin() {
                     <CardContent className="p-4">
                       <RadioGroup
                         value={detailOrder.status}
-                        onValueChange={(value) => handleStatusChange(detailOrder.id, value)}
+                        onValueChange={(value: string) => handleStatusChange(detailOrder.id, value)}
                         className="space-y-3"
                       >
                         <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'new' ? 'bg-yellow-50 border border-yellow-200' : ''}`}>
@@ -865,7 +865,7 @@ export default function Admin() {
                     </CardHeader>
                     <CardContent className="p-4">
                       <div className="space-y-3">
-                        {detailOrder.items.map((item: OrderItem, index: number) => (
+                        {detailOrder.items.map((item: OrderItemType, index: number) => (
                           <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                             <div className="flex justify-between items-center mb-1">
                               <span className="font-semibold">{item.name}</span>
@@ -880,7 +880,7 @@ export default function Admin() {
                                   サイズ: {item.size}
                                 </span>
                               )}
-                              {item.customizations && item.customizations.map((customization, idx) => (
+                              {item.customizations && item.customizations.map((customization: string, idx: number) => (
                                 <span key={idx} className="text-xs bg-white px-2 py-0.5 rounded-md border border-gray-200">
                                   {getCustomizationLabel(customization)}
                                 </span>

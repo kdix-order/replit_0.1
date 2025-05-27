@@ -291,7 +291,7 @@ export function ProductCustomizeDialog({
             <Label className="font-medium">サイズ:</Label>
             <RadioGroup
               value={size}
-              onValueChange={(value) => setSize(value as Size)}
+              onValueChange={(value: string) => setSize(value as Size)}
               className="grid grid-cols-2 gap-2"
             >
               {SIZES.map((sizeOption: typeof SIZES[number]) => (
@@ -319,7 +319,7 @@ export function ProductCustomizeDialog({
                   <Checkbox
                     id={option.id}
                     checked={customizations.includes(option.id)}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked: boolean | "indeterminate") => 
                       handleCustomizationChange(checked as boolean, option.id)
                     }
                   />
