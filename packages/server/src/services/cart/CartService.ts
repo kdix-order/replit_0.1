@@ -61,17 +61,17 @@ export class CartService {
    * カートアイテムの数量を更新します
    * @param id カートアイテムID
    * @param quantity 新しい数量
-   * @returns 更新されたカートアイテム
-   * @throws カートアイテムが存在しない場合、または数量が無効な場合
+   * @returns 更新されたカートアイテムまたは操作結果
+   * @throws 数量が無効な場合
    */
-  async updateCartItemQuantity(id: string, quantity: number): Promise<CartItem> {
+  async updateCartItemQuantity(id: string, quantity: number): Promise<CartItem | { success: boolean; message: string }> {
     if (quantity < 0) {
       throw new Error("Quantity cannot be negative");
     }
     
     if (quantity === 0) {
       await cartRepository.deleteCartItem(id);
-      throw new Error("Item removed from cart");
+      return { success: true, message: "Item removed from cart" };
     }
     
     const updatedItem = await cartRepository.updateCartItemQuantity(id, quantity);

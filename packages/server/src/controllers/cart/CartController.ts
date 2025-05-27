@@ -77,19 +77,17 @@ export class CartController {
         return;
       }
 
-      if (quantity === 0) {
-        await cartService.deleteCartItem(id);
+      const result = await cartService.updateCartItemQuantity(id, quantity);
+      
+      if ('success' in result && result.success) {
         res.status(204).send();
         return;
       }
-
-      const updatedItem = await cartService.updateCartItemQuantity(id, quantity);
-      res.json(updatedItem);
+      
+      res.json(result);
     } catch (error) {
       if (error instanceof Error && error.message === "Cart item not found") {
         res.status(404).json({ message: "カートアイテムが見つかりません" });
-      } else if (error instanceof Error && error.message === "Item removed from cart") {
-        res.status(204).send();
       } else {
         throw error;
       }
