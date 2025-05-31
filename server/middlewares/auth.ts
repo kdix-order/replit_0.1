@@ -96,12 +96,19 @@ export const configurePassport = (app: Express) => {
 
           console.log(`Google認証: ログイン試行 - ${email}`);
 
-          // 管理者特権アカウント
-          const ADMIN_EMAIL = 'yutonaka911@gmail.com';
-          const ALLOWED_DOMAINS = ['kindai.ac.jp', 'itp.kindai.ac.jp'];
+          // 管理者特権アカウント（環境変数から取得、カンマ区切りで複数指定可能）
+          const ADMIN_EMAILS = process.env.ADMIN_EMAILS 
+            ? process.env.ADMIN_EMAILS.split(',').map(email => email.trim().toLowerCase())
+            : [];
+          
+          // 許可されたドメイン（環境変数から取得、デフォルト値あり）
+          const ALLOWED_DOMAINS = process.env.GOOGLE_ALLOWED_DOMAINS 
+            ? process.env.GOOGLE_ALLOWED_DOMAINS.split(',').map(domain => domain.trim())
+            : ['kindai.ac.jp', 'itp.kindai.ac.jp'];
 
-          // メールアドレスの検証
-          const isAdmin = email === ADMIN_EMAIL;
+          // メールアドレスの検証（大文字小文字を区別しない）
+          const normalizedEmail = email.toLowerCase();
+          const isAdmin = ADMIN_EMAILS.includes(normalizedEmail);
           const isAllowedDomain = ALLOWED_DOMAINS.some(domain => email.endsWith(`@${domain}`));
 
           // 許可されていないメールアドレスの場合

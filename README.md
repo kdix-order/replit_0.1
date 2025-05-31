@@ -69,6 +69,9 @@ GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_ALLOWED_DOMAINS=kindai.ac.jp,itp.kindai.ac.jp
 
+# 管理者設定
+ADMIN_EMAILS=admin@example.com,admin2@kindai.ac.jp
+
 # PayPay API設定
 PAYPAY_API_KEY=your_paypay_api_key
 PAYPAY_API_SECRET=your_paypay_api_secret
@@ -239,6 +242,9 @@ JWT_SECRET=your_jwt_secret_key_here
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_ALLOWED_DOMAINS=kindai.ac.jp,itp.kindai.ac.jp
+
+# 管理者設定（カンマ区切りで複数指定可能）
+ADMIN_EMAILS=admin@example.com,admin2@kindai.ac.jp
 
 # PayPay API
 PAYPAY_API_KEY=your_paypay_api_key
