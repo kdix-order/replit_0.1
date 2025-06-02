@@ -13,7 +13,12 @@ const router = express.Router();
 router.get("/api/admin/orders", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const orders = await storage.getOrders();
-    res.json(orders);
+    // Transform callNumber for admin view: (callNumber % 99) + 201
+    const transformedOrders = orders.map(order => ({
+      ...order,
+      callNumber: (order.callNumber % 99) + 201
+    }));
+    res.json(transformedOrders);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
@@ -60,7 +65,12 @@ router.patch("/api/admin/orders/:id", isAuthenticated, isAdmin, async (req, res)
     console.log(`Order ${id} status updated to "${status}" successfully`);
 
     // Return the updated order with time slot information
-    res.json({ ...updatedOrder, timeSlot });
+    // Transform callNumber for admin view: (callNumber % 99) + 201
+    res.json({ 
+      ...updatedOrder, 
+      callNumber: (updatedOrder.callNumber % 99) + 201,
+      timeSlot 
+    });
   } catch (error) {
     console.error("Order status update error:", error);
     res.status(500).json({
