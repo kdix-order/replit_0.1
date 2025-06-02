@@ -28,6 +28,16 @@ import { randomUUID } from 'crypto';
 // フロントエンドのURL（リダイレクト先として使用）
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
+// PayPay SDKインスタンスをモジュールレベルで保持
+let payPayInstance: any = null;
+let isInitialized = false;
+
+// モジュールロード時に初期化を試みる
+setTimeout(() => {
+  console.log('=== PayPay自動初期化を開始 ===');
+  initializePayPay();
+}, 0);
+
 /**
  * PayPay SDKを初期化する関数
  * 
@@ -37,11 +47,17 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
  * @returns 設定済みのPayPay SDKインスタンス、または環境変数未設定時はnull
  */
 export function initializePayPay() {
+  // 既に初期化済みの場合はキャッシュされたインスタンスを返す
+  if (isInitialized) {
+    return payPayInstance;
+  }
   // 必要な環境変数がすべて設定されているか確認
   if (!process.env.PAYPAY_API_KEY || 
       !process.env.PAYPAY_API_SECRET || 
       !process.env.PAYPAY_MERCHANT_ID) {
     console.warn('PayPay環境変数が設定されていません。デモモードで動作します。');
+    isInitialized = true;
+    payPayInstance = null;
     return null; // デモモードを示すnullを返す
   }
 
@@ -53,6 +69,9 @@ export function initializePayPay() {
     productionMode: false, // サンドボックス環境。本番環境の場合はtrueに変更
   });
 
+  console.log('PayPay SDKが正常に初期化されました');
+  isInitialized = true;
+  payPayInstance = PAYPAYOPA;
   return PAYPAYOPA;
 }
 

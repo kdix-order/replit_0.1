@@ -53,6 +53,7 @@ export function initializePayPay() {
     productionMode: false, // サンドボックス環境。本番環境の場合はtrueに変更
   });
 
+  console.log('PayPay SDKが正常に初期化されました');
   return PAYPAYOPA;
 }
 
