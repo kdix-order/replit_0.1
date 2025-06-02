@@ -5,7 +5,7 @@
 import express from "express";
 import { isAuthenticated } from "../middlewares/auth";
 import { createPayment, getPaymentDetails } from "../paypay";
-import { storage } from "server/storage";
+import { storage } from "../storage";
 
 const router = express.Router();
 

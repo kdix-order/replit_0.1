@@ -21,6 +21,10 @@
   },
   "include": ["**/*"],
   "references": [
-    { "path": "../shared" }
+    {
+      "compilerOptions": {
+        "composite": true,
+      },
+    }
   ]
 }
