@@ -6,6 +6,7 @@ import express, { type Request, type Response } from "express";
 import { isAdmin, isAuthenticated } from "../middlewares/auth";
 import { storage } from "../storage";
 import { isAdminUser } from "../utils/auth";
+import { transformCallNumber } from "../utils/callNumber";
 
 const router = express.Router();
 
@@ -13,10 +14,10 @@ const router = express.Router();
 router.get("/api/admin/orders", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const orders = await storage.getOrders();
-    // Transform callNumber for admin view: (callNumber % 99) + 201
+    // Transform callNumber for admin view
     const transformedOrders = orders.map(order => ({
       ...order,
-      callNumber: (order.callNumber % 99) + 201
+      callNumber: transformCallNumber(order.callNumber)
     }));
     res.json(transformedOrders);
   } catch (error) {
@@ -65,10 +66,10 @@ router.patch("/api/admin/orders/:id", isAuthenticated, isAdmin, async (req, res)
     console.log(`Order ${id} status updated to "${status}" successfully`);
 
     // Return the updated order with time slot information
-    // Transform callNumber for admin view: (callNumber % 99) + 201
+    // Transform callNumber for admin view
     res.json({ 
       ...updatedOrder, 
-      callNumber: (updatedOrder.callNumber % 99) + 201,
+      callNumber: transformCallNumber(updatedOrder.callNumber),
       timeSlot 
     });
   } catch (error) {
