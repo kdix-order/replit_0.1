@@ -13,7 +13,6 @@
 
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import dotenv from 'dotenv';
 import { configurePassport } from "./middlewares/auth";
 import admin from "./routes/admin";
 import auth from "./routes/auth";
@@ -23,9 +22,6 @@ import orders from "./routes/orders";
 import payments from "./routes/payments";
 import products from "./routes/products";
 import timeslots from "./routes/timeslots";
-
-// 環境変数の読み込み
-dotenv.config();
 
 /**
  * すべてのAPIルートを登録する関数
