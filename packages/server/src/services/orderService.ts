@@ -12,6 +12,7 @@ import {
   OrderWithTimeSlot,
   CartItemWithProduct
 } from "../../../shared/schema";
+import { transformCallNumber } from "../../../../server/utils/callNumber";
 
 /**
  * 注文サービスクラス
@@ -134,7 +135,7 @@ export class OrderService {
    * @returns 表示用の注文番号（201-300の範囲）
    */
   formatCallNumber(dbCallNumber: number): number {
-    return (dbCallNumber % 99) + 201;
+    return transformCallNumber(dbCallNumber);
   }
 }
 
