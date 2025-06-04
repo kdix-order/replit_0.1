@@ -130,26 +130,6 @@ export type AuthResponse = {
   token: string;
 };
 
-export const feedback = pgTable("feedback", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  orderId: uuid("order_id").references(() => orders.id, { onDelete: "cascade" }),
-  sentiment: text("sentiment", { enum: ["positive", "negative"] }).notNull(),
-  rating: integer("rating"),
-  comment: text("comment"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertFeedbackSchema = createInsertSchema(feedback).pick({
-  userId: true,
-  orderId: true,
-  sentiment: true,
-  rating: true,
-  comment: true,
-});
-
-export type Feedback = typeof feedback.$inferSelect;
-export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 
 // Product customization options
 export const SIZES = ["ガールズサイズ", "並", "ご飯大", "おかず大", "大大"] as const;

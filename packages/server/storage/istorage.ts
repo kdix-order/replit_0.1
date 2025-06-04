@@ -1,7 +1,7 @@
 import type {
     CartItem,
-    CartItemWithProduct, Feedback,
-    InsertCartItem, InsertFeedback, InsertOrder,
+    CartItemWithProduct,
+    InsertCartItem, InsertOrder,
     InsertUser, Order, OrderWithTimeSlot,
     Product, StoreSetting, TimeSlot,
     TimeSlotWithAvailability,
@@ -38,12 +38,6 @@ export interface IStorage {
     getOrdersByUser(userId: string): Promise<OrderWithTimeSlot[]>;
     getOrder(id: string): Promise<Order | undefined>;
     updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
-
-    // Feedback methods
-    createFeedback(feedback: InsertFeedback): Promise<Feedback>;
-    getFeedbackByOrderId(orderId: string): Promise<Feedback | undefined>;
-    getFeedbackByUserId(userId: string): Promise<Feedback[]>;
-    getAllFeedback(): Promise<Feedback[]>;
 
     // Store settings methods
     getStoreSettings(): Promise<StoreSetting>;

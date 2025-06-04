@@ -13,7 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getCustomizationLabel } from "@/lib/utils";
 import { BowlSteamSpinner } from "@/components/ui/food-spinner";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter, Clock, AlertCircle, PauseCircle, PlayCircle, MessageSquare, ThumbsUp, ThumbsDown, User, Calendar } from "lucide-react";
+import { RefreshCw, Filter, Clock, AlertCircle, PauseCircle, PlayCircle, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -21,7 +21,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect, useMemo } from "react";
 import { useStoreSettings, useUpdateStoreSettings } from "@/hooks/use-store-settings";
-import { useFeedback } from "@/hooks/use-feedback";
 import { Switch } from "@/components/ui/switch";
 import { OrderStatusTracker } from "@/components/order-status-tracker";
 
@@ -240,101 +239,6 @@ function OrderItem({
   );
 }
 
-/**
- * フィードバックタブコンポーネント
- * 顧客からのフィードバック一覧を表示します
- */
-function FeedbackTab() {
-  const { getAdminFeedback, adminFeedback, isLoadingAdminFeedback } = useFeedback();
-  const [selectedFeedback, setSelectedFeedback] = useState<any | null>(null);
-
-  // フィードバック一覧を取得
-  useEffect(() => {
-    getAdminFeedback();
-  }, [getAdminFeedback]);
-
-  if (isLoadingAdminFeedback) {
-    return (
-      <div className="text-center py-10">
-        <BowlSteamSpinner size="lg" className="mx-auto text-[#e80113] mb-4" />
-        <p className="text-gray-500">フィードバック情報を読み込んでいます...</p>
-      </div>
-    );
-  }
-
-  return (
-    <Card className="border-2 border-gray-100 shadow-md overflow-hidden mb-8">
-      <CardHeader className="bg-[#e80113] text-white py-4 px-6">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-lg font-bold">顧客フィードバック</CardTitle>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="p-6">
-        {adminFeedback.length === 0 ? (
-          <div className="text-center py-10">
-            <MessageSquare className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-            <h3 className="text-xl font-medium text-gray-700 mb-2">フィードバックはありません</h3>
-            <p className="text-gray-500">まだ顧客からのフィードバックはありません。</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {adminFeedback.map((feedback) => (
-              <div 
-                key={feedback.id} 
-                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center">
-                    <div className={`rounded-full p-2 mr-3 ${
-                      feedback.sentiment === "positive" 
-                        ? "bg-green-100 text-green-600" 
-                        : "bg-red-100 text-red-600"
-                    }`}>
-                      {feedback.sentiment === "positive" 
-                        ? <ThumbsUp className="h-4 w-4" /> 
-                        : <ThumbsDown className="h-4 w-4" />
-                      }
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-bold text-gray-900">{feedback.userName}</h3>
-                        {feedback.rating && (
-                          <div className="px-2 py-1 bg-gray-100 rounded-full text-xs">
-                            {feedback.rating === 4 && "とても良い (4点)"}
-                            {feedback.rating === 3 && "良い (3点)"}
-                            {feedback.rating === 2 && "普通 (2点)"}
-                            {feedback.rating === 1 && "改善が必要 (1点)"}
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        {new Date(feedback.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {feedback.orderDetails && (
-                    <div className="flex items-center bg-[#fee10b]/10 px-3 py-1 rounded-full text-xs">
-                      <span className="text-gray-700 mr-1">呼出番号:</span>
-                      <span className="font-bold text-[#e80113]">{feedback.orderDetails.callNumber}</span>
-                    </div>
-                  )}
-                </div>
-                
-                {feedback.comment && (
-                  <div className="bg-gray-50 p-3 rounded-md mt-3 text-sm">
-                    {feedback.comment}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 /**
  * 管理者ページコンポーネント
@@ -393,37 +297,34 @@ export default function Admin() {
   // Mutation for status update
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      try {
-        const response = await apiRequest("PATCH", `/api/admin/orders/${id}`, { status });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "ステータス更新に失敗しました");
-        }
-        return response.json();
-      } catch (error) {
-        throw error;
-      }
+      const response = await apiRequest("PATCH", `/api/admin/orders/${id}`, { status });
+      return response;
     },
     onSuccess: (data, variables) => {
+      // キャッシュを更新
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
       
-      // Show success message specific to the status change
-      const statusText = statusLabels[variables.status as keyof typeof statusLabels].text;
+      // 注文情報を取得
       const order = orders?.find(o => o.id === variables.id);
-      const callNumber = order ? order.callNumber : variables.id;
+      const callNumber = order ? order.callNumber : "不明";
+      const statusText = statusLabels[variables.status as keyof typeof statusLabels]?.text || variables.status;
       
-      // 通知を表示
+      // 明示的にトーストを表示
       toast({
         title: `ステータスを「${statusText}」に更新しました`,
         description: `呼出番号 ${callNumber} の注文のステータスが正常に更新されました。`,
+        duration: 5000, // 5秒間表示
       });
     },
     onError: (error: any) => {
-      console.error("Status update error:", error);
+      console.error("Order status update error:", error);
+      
+      // エラートーストを表示
       toast({
         title: "エラーが発生しました",
         description: error.message || "ステータスの更新に失敗しました。もう一度お試しください。",
         variant: "destructive",
+        duration: 5000,
       });
     },
   });
@@ -564,22 +465,12 @@ export default function Admin() {
                     checked={isAcceptingOrders}
                     onCheckedChange={async (checked) => {
                       try {
-                        console.log(`Request to change accepting orders to: ${checked}`);
                         await updateStoreSettings(checked);
                         await refetchStoreSettings();
-                        toast({
-                          title: checked ? "注文受付を再開しました" : "注文受付を停止しました",
-                          description: checked 
-                            ? "お客様からの新規注文を受け付けます。" 
-                            : "お客様からの新規注文を停止しました。既存の注文は処理されます。",
-                        });
+                        // 店舗設定のトースト表示を削除
                       } catch (error) {
                         console.error("Store settings update error:", error);
-                        toast({
-                          title: "エラーが発生しました",
-                          description: "設定の更新に失敗しました。もう一度お試しください。",
-                          variant: "destructive",
-                        });
+                        // エラートースト表示を削除
                       }
                     }}
                   />
@@ -598,17 +489,10 @@ export default function Admin() {
                       try {
                         await updateStoreSettings(true);
                         await refetchStoreSettings();
-                        toast({
-                          title: "注文受付を再開しました",
-                          description: "お客様からの新規注文を受け付けます。",
-                        });
+                        // 受付開始のトースト表示を削除
                       } catch (error) {
                         console.error("Error enabling order acceptance:", error);
-                        toast({
-                          title: "エラーが発生しました",
-                          description: "設定の更新に失敗しました。",
-                          variant: "destructive",
-                        });
+                        // エラートースト表示を削除
                       }
                     }}
                     className="mr-2 bg-green-600 hover:bg-green-700 text-white"
@@ -623,17 +507,10 @@ export default function Admin() {
                       try {
                         await updateStoreSettings(false);
                         await refetchStoreSettings();
-                        toast({
-                          title: "注文受付を停止しました",
-                          description: "お客様からの新規注文を停止しました。既存の注文は処理されます。",
-                        });
+                        // 受付停止のトースト表示を削除
                       } catch (error) {
                         console.error("Error disabling order acceptance:", error);
-                        toast({
-                          title: "エラーが発生しました",
-                          description: "設定の更新に失敗しました。",
-                          variant: "destructive",
-                        });
+                        // エラートースト表示を削除
                       }
                     }}
                     className="bg-red-600 hover:bg-red-700 text-white"
@@ -658,7 +535,7 @@ export default function Admin() {
         </CardContent>
       </Card>
 
-      {/* Orders & Feedback tabs */}
+      {/* Orders tab */}
       <Tabs defaultValue="orders" className="mb-8">
         <TabsList className="w-full bg-gray-100 p-0.5 mb-6">
           <TabsTrigger 
@@ -668,14 +545,6 @@ export default function Admin() {
             <div className="flex items-center justify-center">
               注文管理
               <Badge className="ml-2 bg-gray-100 text-black">{orderCounts.total}</Badge>
-            </div>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="feedback" 
-            className="flex-1 py-3 bg-white data-[state=active]:bg-[#e80113] data-[state=active]:text-white rounded-md"
-          >
-            <div className="flex items-center justify-center">
-              フィードバック
             </div>
           </TabsTrigger>
         </TabsList>
@@ -762,11 +631,6 @@ export default function Admin() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-        
-        {/* 顧客フィードバックタブ */}
-        <TabsContent value="feedback">
-          <FeedbackTab />
         </TabsContent>
       </Tabs>
       
