@@ -8,7 +8,6 @@
  * - カート操作のエンドポイント
  * - 注文処理のエンドポイント
  * - 管理者向けエンドポイント
- * - フィードバック機能のエンドポイント
  */
 
 import type { Express, Request, Response } from "express";
@@ -17,7 +16,6 @@ import { configurePassport } from "./middlewares/auth";
 import admin from "./routes/admin";
 import auth from "./routes/auth";
 import cart from "./routes/cart";
-import feedback from "./routes/feedback";
 import orders from "./routes/orders";
 import payments from "./routes/payments";
 import products from "./routes/products";
@@ -32,7 +30,6 @@ import timeslots from "./routes/timeslots";
  * - カート操作（追加、更新、削除）
  * - 注文の作成と取得
  * - 管理者機能（注文管理、店舗設定）
- * - フィードバック機能
  *
  * @param app - Expressアプリケーションインスタンス
  * @returns HTTPサーバーインスタンス
@@ -44,7 +41,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/", admin);
   app.use("/", auth);
   app.use("/", cart);
-  app.use("/", feedback);
   app.use("/", orders);
   app.use("/", payments);
   app.use("/", products);

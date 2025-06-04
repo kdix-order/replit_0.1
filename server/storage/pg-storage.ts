@@ -2,9 +2,7 @@ import {
   CartItem,
   cartItems,
   CartItemWithProduct,
-  Feedback,
   InsertCartItem,
-  InsertFeedback,
   InsertOrder,
   InsertProduct,
   InsertTimeSlot,
@@ -16,7 +14,6 @@ import {
   TimeSlot,
   TimeSlotWithAvailability,
   User,
-  feedback as feedbacks,
   orders,
   users,
   products,
@@ -49,11 +46,6 @@ export class PgStorage implements IStorage {
     await this.db.delete(cartItems).where(eq(cartItems.userId, userId));
   }
 
-  async createFeedback(feedback: InsertFeedback): Promise<Feedback> {
-    const [result] = await this.db.insert(feedbacks).values(feedback).returning();
-    return result;
-  }
-
   async createOrder(order: InsertOrder): Promise<Order> {
     const [result] = await this.db.insert(orders).values(order).returning();
     return result;
@@ -66,10 +58,6 @@ export class PgStorage implements IStorage {
 
   async deleteCartItem(id: string): Promise<void> {
     await this.db.delete(cartItems).where(eq(cartItems.id, id));
-  }
-
-  async getAllFeedback(): Promise<Feedback[]> {
-    return await this.db.select().from(feedbacks);
   }
 
   async getCartItem(userId: string, productId: string): Promise<CartItem | undefined> {
@@ -94,22 +82,6 @@ export class PgStorage implements IStorage {
       ...row.cartItem,
       product: row.product!,
     }));
-  }
-
-  async getFeedbackByOrderId(orderId: string): Promise<Feedback | undefined> {
-    const rows = await this.db
-      .select()
-      .from(feedbacks)
-      .where(eq(feedbacks.orderId, orderId));
-    return rows[0];
-  }
-
-  async getFeedbackByUserId(userId: string): Promise<Feedback[]> {
-    const rows = await this.db
-      .select()
-      .from(feedbacks)
-      .where(eq(feedbacks.userId, userId));
-    return rows;
   }
 
   async getOrder(id: string): Promise<Order | undefined> {

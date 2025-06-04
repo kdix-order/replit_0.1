@@ -118,54 +118,5 @@ router.patch("/api/admin/store-settings", isAuthenticated, isAdmin, async (req, 
   }
 });
 
-// 管理者向け - すべてのフィードバックを取得
-router.get('/api/admin/feedback', isAuthenticated, async (req: Request, res: Response) => {
-  try {
-    // 管理者権限チェック
-    if (!await isAdminUser(req)) {
-      return res.status(403).json({ message: "Forbidden - Admin permissions required" });
-    }
-
-    // すべてのフィードバックを取得
-    const allFeedback = await storage.getAllFeedback();
-
-    // 注文情報とユーザー情報を付加
-    const enrichedFeedback = await Promise.all(
-      allFeedback.map(async (feedback) => {
-        let orderDetails = null;
-        let userName = 'Unknown user';
-
-        if (feedback.orderId) {
-          const order = await storage.getOrder(feedback.orderId);
-          if (order) {
-            orderDetails = {
-              id: order.id,
-              callNumber: order.callNumber,
-              status: order.status,
-              total: order.total,
-              createdAt: order.createdAt
-            };
-          }
-        }
-
-        const user = await storage.getUser(feedback.userId);
-        if (user) {
-          userName = user.username || user.email;
-        }
-
-        return {
-          ...feedback,
-          orderDetails,
-          userName
-        };
-      })
-    );
-
-    res.json(enrichedFeedback);
-  } catch (error) {
-    console.error('Error fetching feedback:', error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
 
 export default router;
