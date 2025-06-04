@@ -85,8 +85,7 @@ export function useFeedback() {
    */
   const submitFeedbackMutation = useMutation({
     mutationFn: async (data: FeedbackData) => {
-      const response = await apiRequest("POST", "/api/feedback", data);
-      return response.json();
+      return await apiRequest("POST", "/api/feedback", data);
     },
     // 送信成功時の処理
     onSuccess: () => {

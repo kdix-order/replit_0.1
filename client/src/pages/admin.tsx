@@ -393,18 +393,9 @@ export default function Admin() {
   // Mutation for status update
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      try {
-        const response = await apiRequest("PATCH", `/api/admin/orders/${id}`, { status });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "ステータス更新に失敗しました");
-        }
-        return response.json();
-      } catch (error) {
-        throw error;
-      }
+      return await apiRequest("PATCH", `/api/admin/orders/${id}`, { status });
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
       
       // Show success message specific to the status change
