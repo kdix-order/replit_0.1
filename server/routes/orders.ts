@@ -5,6 +5,7 @@
 import express from "express";
 import { isAuthenticated } from "../middlewares/auth";
 import { storage } from "../storage";
+import { transformCallNumber } from "../utils/callNumber";
 
 const router = express.Router();
 
@@ -65,7 +66,7 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
 
     res.status(201).json({
       ...order,
-      callNumber: (order.callNumber % 99) + 201,
+      callNumber: transformCallNumber(order.callNumber),
       timeSlot
     });
   } catch (error) {
@@ -76,7 +77,7 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
 router.get("/api/orders", isAuthenticated, async (req, res) => {
   try {
     const orders = await storage.getOrdersByUser(req.user.id);
-    res.json(orders.map(o => ({ ...o, callNumber: (o.callNumber % 99) + 201 })));
+    res.json(orders.map(o => ({ ...o, callNumber: transformCallNumber(o.callNumber) })));
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
@@ -102,7 +103,7 @@ router.get("/api/orders/:id", isAuthenticated, async (req, res) => {
     // レスポンスとしてタイムスロット情報も含める
     res.json({
       ...order,
-      callNumber: (order.callNumber % 99) + 201,
+      callNumber: transformCallNumber(order.callNumber),
       timeSlot
     });
   } catch (error) {
