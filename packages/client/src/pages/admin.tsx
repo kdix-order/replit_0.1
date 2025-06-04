@@ -393,37 +393,34 @@ export default function Admin() {
   // Mutation for status update
   const updateOrderStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      try {
-        const response = await apiRequest("PATCH", `/api/admin/orders/${id}`, { status });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "ステータス更新に失敗しました");
-        }
-        return response.json();
-      } catch (error) {
-        throw error;
-      }
+      const response = await apiRequest("PATCH", `/api/admin/orders/${id}`, { status });
+      return response;
     },
     onSuccess: (data, variables) => {
+      // キャッシュを更新
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
       
-      // Show success message specific to the status change
-      const statusText = statusLabels[variables.status as keyof typeof statusLabels].text;
+      // 注文情報を取得
       const order = orders?.find(o => o.id === variables.id);
-      const callNumber = order ? order.callNumber : variables.id;
+      const callNumber = order ? order.callNumber : "不明";
+      const statusText = statusLabels[variables.status as keyof typeof statusLabels]?.text || variables.status;
       
-      // 通知を表示
+      // 明示的にトーストを表示
       toast({
         title: `ステータスを「${statusText}」に更新しました`,
         description: `呼出番号 ${callNumber} の注文のステータスが正常に更新されました。`,
+        duration: 5000, // 5秒間表示
       });
     },
     onError: (error: any) => {
-      console.error("Status update error:", error);
+      console.error("Order status update error:", error);
+      
+      // エラートーストを表示
       toast({
         title: "エラーが発生しました",
         description: error.message || "ステータスの更新に失敗しました。もう一度お試しください。",
         variant: "destructive",
+        duration: 5000,
       });
     },
   });
@@ -564,7 +561,6 @@ export default function Admin() {
                     checked={isAcceptingOrders}
                     onCheckedChange={async (checked) => {
                       try {
-                        console.log(`Request to change accepting orders to: ${checked}`);
                         await updateStoreSettings(checked);
                         await refetchStoreSettings();
                         toast({
