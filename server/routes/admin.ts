@@ -7,7 +7,7 @@ import { isAdmin, isAuthenticated } from "../middlewares/auth";
 import { storage } from "../storage";
 import { isAdminUser } from "../utils/auth";
 import { isValidStatusTransition, getStatusTransitionError } from "../utils/orderStatus";
-import { ORDER_STATUSES, type OrderStatus } from "@shared/schema";
+import { ORDER_STATUSES, type OrderStatus } from "../../shared/schema";
 
 const router = express.Router();
 

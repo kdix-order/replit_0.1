@@ -50,7 +50,7 @@ router.get("/api/payments/paypay/completed/:merchantPaymentId", async (req, res)
     if ((response as any).BODY.data.status === "COMPLETED") {
       // 支払い完了時の処理
       // Orderに支払い完了のステータスを更新
-      const order = await storage.updateOrderStatus(merchantPaymentId, "paid");
+      const order = await storage.updateOrderStatus(merchantPaymentId, "paid", "system", "PayPay支払い完了");
       if (!order) {
         return res.status(404).json({ message: "注文が見つかりません" });
       }
