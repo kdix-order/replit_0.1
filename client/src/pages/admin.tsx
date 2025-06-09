@@ -28,32 +28,12 @@ import { OrderFilters } from "@/components/admin/order-filters";
 import { getValidNextStatuses, isFinalStatus, getStatusLabel, isUndoTransition, getStatusLabelInfo, type OrderStatus } from "@/utils/orderStatus";
 import { handleError } from "@/lib/error-handler";
 import { useDebounce } from "@/hooks/use-debounce";
+import { TIME_CONSTANTS, DEBOUNCE_DELAYS, COLORS, MISC_CONSTANTS } from "@/constants/admin";
+import type { Order, OrderItem, OrderCounts, StatusIconMap } from "@/types/admin";
 
-type OrderItem = {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  size?: string;
-  customizations?: string[];
-};
-
-type Order = {
-  id: string;
-  userId: string;
-  callNumber: number;
-  status: "pending" | "paid" | "ready" | "completed" | "cancelled" | "refunded";
-  total: number;
-  timeSlot: {
-    id: string;
-    time: string;
-  };
-  createdAt: string;
-  items: OrderItem[];
-};
 
 // ステータスごとのアイコンを定義
-const statusIcons: Record<OrderStatus, JSX.Element | null> = {
+const statusIcons: StatusIconMap = {
   pending: <Clock className="w-4 h-4 mr-1" />,
   paid: <Clock className="w-4 h-4 mr-1" />,
   ready: null,
@@ -88,40 +68,44 @@ const OrderItem = memo<{
   const [isExpanded, setIsExpanded] = useState(false);
   
   return (
-    <div 
-      className="hover:bg-gray-50 transition-colors"
+    <article 
+      className="hover:bg-gray-50 transition-colors focus-within:ring-2 focus-within:ring-[#e80113] focus-within:ring-offset-2"
+      aria-label={`注文 呼出番号${order.callNumber} ステータス: ${getStatusLabelInfo(order.status as OrderStatus).text}`}
     >
       {/* 注文概要セクション（常に表示） */}
-      <div 
-        className="p-4 cursor-pointer"
+      <button 
+        className="w-full p-4 text-left focus:outline-none focus:ring-2 focus:ring-[#e80113] focus:ring-offset-2 rounded-lg"
         onClick={() => setIsExpanded(!isExpanded)}
+        aria-expanded={isExpanded}
+        aria-controls={`order-details-${order.id}`}
+        aria-label={`注文詳細を${isExpanded ? '折りたたむ' : '展開する'} 呼出番号${order.callNumber}`}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* 左側: 呼出番号 */}
-          <div className="flex-shrink-0 w-2/5 md:w-1/4 lg:w-1/5">
-            <div className="bg-[#fff9dc] px-4 py-3 rounded-lg border-2 border-[#e80113] shadow-sm flex flex-col items-center justify-center">
-              <div className="text-xs text-gray-600">呼出番号</div>
-              <div className="font-bold text-4xl text-[#e80113]">{order.callNumber}</div>
+          <div className="flex-shrink-0 w-full sm:w-auto">
+            <div className="bg-[#fff9dc] px-4 py-3 rounded-lg border-2 border-[#e80113] shadow-sm flex flex-col items-center justify-center max-w-[120px] mx-auto sm:mx-0">
+              <div className="text-sm sm:text-xs text-gray-600" aria-hidden="true">呼出番号</div>
+              <div className="font-bold text-3xl sm:text-4xl text-[#e80113]" aria-label={`呼出番号 ${order.callNumber}`}>{order.callNumber}</div>
             </div>
           </div>
           
           {/* 中央: 注文内容の概要 */}
-          <div className="flex-grow px-4 md:px-6">
-            <div className="flex flex-col">
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-semibold">注文内容 <span className="text-[#e80113]">¥{order.total}</span></span>
-                <Badge className={getStatusLabelInfo(order.status as OrderStatus).className}>
+          <div className="flex-grow sm:px-4 md:px-6">
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <span className="font-semibold text-base sm:text-sm">注文内容 <span className="text-[#e80113]" aria-label={`合計金額 ${order.total}円`}>¥{order.total}</span></span>
+                <Badge className={`${getStatusLabelInfo(order.status as OrderStatus).className} text-sm sm:text-xs`} role="status" aria-live="polite">
                   <div className="flex items-center">
                     {statusIcons[order.status as OrderStatus]}
                     {getStatusLabelInfo(order.status as OrderStatus).text}
                   </div>
                 </Badge>
               </div>
-              <div className="text-sm text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap">
-                {order.items.slice(0, 1).map((item: OrderItem) => (
+              <div className="text-base sm:text-sm text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap" aria-label="注文商品">
+                {order.items.slice(0, MISC_CONSTANTS.MAX_ITEMS_PREVIEW).map((item: OrderItem) => (
                   <span key={item.id}>
                     {item.name}
-                    {item.size && <span className="text-xs text-gray-500"> ({item.size})</span>}
+                    {item.size && <span className="text-sm sm:text-xs text-gray-500" aria-label={`サイズ: ${item.size}`}> ({item.size})</span>}
                     <span className="text-gray-500"> ×{item.quantity}</span>
                   </span>
                 ))}
@@ -131,30 +115,35 @@ const OrderItem = memo<{
           </div>
           
           {/* 右側: 受取時間 */}
-          <div className="flex-shrink-0 text-right">
-            <div className="bg-white px-2 py-1 rounded-lg border border-gray-200 shadow-sm text-center">
-              <div className="text-xs text-gray-500">受取</div>
-              <div className="font-semibold text-sm text-[#e80113]">{order.timeSlot.time}</div>
+          <div className="flex-shrink-0 w-full sm:w-auto">
+            <div className="bg-white px-3 py-2 rounded-lg border border-gray-200 shadow-sm text-center sm:text-right">
+              <div className="text-sm sm:text-xs text-gray-500" aria-hidden="true">受取</div>
+              <div className="font-semibold text-base sm:text-sm text-[#e80113]" aria-label={`受取予定時間 ${order.timeSlot.time}`}>{order.timeSlot.time}</div>
             </div>
           </div>
         </div>
         
         {/* 展開アイコン */}
-        <div className="flex justify-center mt-2">
-          <span className="text-xs text-gray-500 flex items-center">
+        <div className="flex justify-center mt-3">
+          <span className="text-sm sm:text-xs text-gray-500 flex items-center" aria-hidden="true">
             {isExpanded ? '折りたたむ' : '詳細を表示'}
-            <svg className={`w-4 h-4 ml-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg className={`w-4 h-4 ml-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7"></path>
             </svg>
           </span>
         </div>
-      </div>
+      </button>
       
       {/* 展開時の詳細表示 */}
       {isExpanded && (
-        <div className="border-t border-gray-200 p-4 bg-white">
+        <div 
+          id={`order-details-${order.id}`}
+          className="border-t border-gray-200 p-4 bg-white"
+          role="region"
+          aria-label="注文詳細情報"
+        >
           {/* 注文情報ヘッダー */}
-          <div className="mb-3 bg-gray-50 p-3 rounded flex flex-wrap gap-3 lg:gap-4 text-sm">
+          <div className="mb-3 bg-gray-50 p-3 rounded flex flex-wrap gap-3 lg:gap-4 text-base sm:text-sm">
             <div className="flex items-center">
               <span className="text-gray-500 mr-1">注文ID:</span>
               <span className="font-medium">#{order.id}</span>
@@ -166,19 +155,19 @@ const OrderItem = memo<{
           </div>
           
           {/* 進捗ステータストラッカー */}
-          <div className="mb-4 transform scale-110 origin-top">
+          <div className="mb-4 transform scale-100 sm:scale-110 origin-top" role="region" aria-label="注文の進捗状況">
             <OrderStatusTracker status={order.status} />
           </div>
           
           {/* 注文内容詳細 */}
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
-            <h4 className="font-medium mb-2 text-gray-700">注文内容</h4>
+            <h4 className="font-medium mb-2 text-gray-700 text-base sm:text-sm">注文内容</h4>
             <div className="space-y-2">
               {order.items.map((item: OrderItem, index: number) => (
                 <div key={index} className="bg-white p-3 rounded-md border border-gray-100">
-                  <div className="flex justify-between items-center">
-                    <div className="font-medium">{item.name}</div>
-                    <div className="text-sm">
+                  <div className="flex justify-between items-center flex-wrap gap-2">
+                    <div className="font-medium text-base sm:text-sm">{item.name}</div>
+                    <div className="text-base sm:text-sm">
                       <span className="text-gray-500 mr-1">×{item.quantity}</span>
                       <span className="font-semibold text-[#e80113]">¥{item.price * item.quantity}</span>
                     </div>
@@ -186,12 +175,12 @@ const OrderItem = memo<{
                   {(item.size || (item.customizations && item.customizations.length > 0)) && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {item.size && (
-                        <span className="text-xs bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                        <span className="text-sm sm:text-xs bg-gray-50 px-2 py-1 sm:py-0.5 rounded border border-gray-200" aria-label={`サイズ: ${item.size}`}>
                           {item.size}
                         </span>
                       )}
                       {item.customizations && item.customizations.map((customization, idx) => (
-                        <span key={idx} className="text-xs bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                        <span key={idx} className="text-sm sm:text-xs bg-gray-50 px-2 py-1 sm:py-0.5 rounded border border-gray-200" aria-label={`カスタマイズ: ${getCustomizationLabel(customization)}`}>
                           {getCustomizationLabel(customization)}
                         </span>
                       ))}
@@ -208,12 +197,13 @@ const OrderItem = memo<{
           </div>
           
           {/* 操作ボタン */}
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
             <Button 
               size="lg" 
               variant="outline"
               onClick={() => setDetailOrder(order)}
-              className="bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-3 text-base min-h-[48px]"
+              className="bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-3 text-base min-h-[48px] focus:ring-2 focus:ring-[#e80113] focus:ring-offset-2"
+              aria-label={`呼出番号${order.callNumber}の詳細を表示`}
             >
               詳細を表示
             </Button>
@@ -229,13 +219,15 @@ const OrderItem = memo<{
                 onValueChange={(value: string) => handleStatusChange(order.id, value)}
                 disabled={updateOrderStatusMutation.isPending}
               >
-                <SelectTrigger className={`w-44 h-12 text-base 
+                <SelectTrigger 
+                  className={`w-full sm:w-44 h-12 text-base focus:ring-2 focus:ring-[#e80113] focus:ring-offset-2 
                   ${order.status === 'pending' ? 'bg-gray-100 text-gray-800 border-gray-300' :
                   order.status === 'paid' ? 'bg-[#fee10b] text-black border-[#e80113]' : 
                   order.status === 'ready' ? 'bg-green-100 text-green-800 border-green-300' :
                   order.status === 'completed' ? 'bg-green-100 text-green-800 border-green-300' :
                   order.status === 'cancelled' ? 'bg-red-100 text-red-800 border-red-300' :
                   'bg-red-100 text-red-800 border-red-300'}`}
+                  aria-label={`注文のステータスを変更 現在: ${getStatusLabelInfo(order.status as OrderStatus).text}`}
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -259,7 +251,7 @@ const OrderItem = memo<{
           </div>
         </div>
       )}
-    </div>
+    </article>
   );
 }, (prevProps, nextProps) => {
   // カスタム比較関数でレンダリングを最適化
@@ -283,7 +275,7 @@ export default function Admin() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 300); // 300ms遅延
+  const debouncedSearchQuery = useDebounce(searchQuery, DEBOUNCE_DELAYS.SEARCH);
   const [showOnlyUrgent, setShowOnlyUrgent] = useState(false);
   
   // 店舗設定の取得
@@ -294,7 +286,7 @@ export default function Admin() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000);
+    }, TIME_CONSTANTS.REFRESH_INTERVAL);
     return () => clearInterval(timer);
   }, []);
 
@@ -311,7 +303,7 @@ export default function Admin() {
   } = useQuery<Order[]>({
     queryKey: ["/api/admin/orders"],
     enabled: isAuthenticated && isAdmin,
-    refetchInterval: 60000, // Auto-refresh every 1 minute
+    refetchInterval: TIME_CONSTANTS.REFRESH_INTERVAL, // Auto-refresh every 1 minute
   });
   
   // useEffectを使用して更新を検出
@@ -322,7 +314,7 @@ export default function Admin() {
       
       // 更新アニメーションを表示
       setShowRefreshAnimation(true);
-      setTimeout(() => setShowRefreshAnimation(false), 2000);
+      setTimeout(() => setShowRefreshAnimation(false), TIME_CONSTANTS.REFRESH_ANIMATION_DURATION);
     }
   }, [isLoading, isFetching, orders]);
 
@@ -345,7 +337,7 @@ export default function Admin() {
       toast({
         title: `ステータスを「${statusText}」に更新しました`,
         description: `呼出番号 ${callNumber} の注文のステータスが正常に更新されました。`,
-        duration: 5000, // 5秒間表示
+        duration: TIME_CONSTANTS.TOAST_DURATION.ERROR,
       });
     },
     onError: (error: Error) => {
@@ -400,7 +392,7 @@ export default function Admin() {
         const orderTime = new Date(order.createdAt).getTime();
         const now = new Date().getTime();
         const waitingMinutes = (now - orderTime) / 1000 / 60;
-        return (order.status === 'paid' || order.status === 'ready') && waitingMinutes > 10;
+        return (order.status === 'paid' || order.status === 'ready') && waitingMinutes > TIME_CONSTANTS.URGENT_ORDER_THRESHOLD_MINUTES;
       });
     }
     
@@ -415,20 +407,11 @@ export default function Admin() {
   }, [orders, filterStatus, sortNewest, searchQuery, showOnlyUrgent]);
 
   // Count orders by status
-  const orderCounts = useMemo(() => {
+  const orderCounts = useMemo((): OrderCounts => {
     if (!orders) return { pending: 0, paid: 0, ready: 0, completed: 0, cancelled: 0, refunded: 0, total: 0, urgent: 0 };
     
     const now = new Date().getTime();
-    return orders.reduce((acc: {
-      pending: number;
-      paid: number;
-      ready: number;
-      completed: number;
-      cancelled: number;
-      refunded: number;
-      total: number;
-      urgent: number;
-    }, order: Order) => {
+    return orders.reduce((acc: OrderCounts, order: Order) => {
       if (acc[order.status] !== undefined) {
         acc[order.status]++;
       }
@@ -437,7 +420,7 @@ export default function Admin() {
       // Count urgent orders
       const orderTime = new Date(order.createdAt).getTime();
       const waitingMinutes = (now - orderTime) / 1000 / 60;
-      if ((order.status === 'paid' || order.status === 'ready') && waitingMinutes > 10) {
+      if ((order.status === 'paid' || order.status === 'ready') && waitingMinutes > TIME_CONSTANTS.URGENT_ORDER_THRESHOLD_MINUTES);
         acc.urgent++;
       }
       
@@ -503,7 +486,7 @@ export default function Admin() {
   }, [updateStoreSettings, refetchStoreSettings]);
 
   return (
-    <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+    <main className="max-w-7xl mx-auto py-6 sm:py-10 px-4 sm:px-6 lg:px-8" role="main" aria-label="管理画面">
       {/* Header section */}
       <AdminHeader
         currentTime={currentTime}
@@ -522,27 +505,30 @@ export default function Admin() {
 
       {/* Orders tab */}
       <Tabs defaultValue="orders" className="mb-8">
-        <TabsList className="w-full bg-gray-100 p-1 mb-6">
+        <TabsList className="w-full bg-gray-100 p-1 mb-6" role="tablist" aria-label="管理機能タブ">
           <TabsTrigger 
             value="orders" 
-            className="flex-1 py-4 bg-white data-[state=active]:bg-[#e80113] data-[state=active]:text-white rounded-md text-base font-medium"
+            className="flex-1 py-3 sm:py-4 bg-white data-[state=active]:bg-[#e80113] data-[state=active]:text-white rounded-md text-base font-medium focus:ring-2 focus:ring-[#e80113] focus:ring-offset-2"
+            role="tab"
+            aria-selected="true"
+            aria-controls="orders-panel"
           >
             <div className="flex items-center justify-center">
               注文管理
-              <Badge className="ml-2 bg-gray-100 text-black text-base px-3 py-1">{orderCounts.total}</Badge>
+              <Badge className="ml-2 bg-gray-100 text-black text-sm sm:text-base px-2 sm:px-3 py-1" aria-label={`全${orderCounts.total}件の注文`}>{orderCounts.total}</Badge>
             </div>
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="orders">
+        <TabsContent value="orders" id="orders-panel" role="tabpanel">
           <Card className="border-2 border-gray-100 shadow-md overflow-hidden">
             <CardHeader className="bg-[#e80113] text-white py-4 px-6">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg font-bold">
                   注文一覧
                   {orderCounts.urgent > 0 && (
-                    <Badge className="ml-2 bg-red-600 text-white animate-pulse">
-                      <Bell className="w-3 h-3 mr-1 inline" />
+                    <Badge className="ml-2 bg-red-600 text-white animate-pulse" role="alert" aria-live="assertive">
+                      <Bell className="w-3 h-3 mr-1 inline" aria-hidden="true" />
                       {orderCounts.urgent}件の急ぎの注文
                     </Badge>
                   )}
@@ -561,7 +547,7 @@ export default function Admin() {
               </div>
             </CardHeader>
             
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               {filteredOrders.length === 0 ? (
                 <div className="text-center py-10">
                   <AlertCircle className="mx-auto h-12 w-12 text-gray-300 mb-3" />
@@ -571,7 +557,7 @@ export default function Admin() {
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200">
+                <div className="divide-y divide-gray-200" role="list" aria-label="注文一覧">
                   {filteredOrders.map((order) => (
                     <OrderItem 
                       key={order.id}
@@ -591,12 +577,12 @@ export default function Admin() {
       
       {/* 注文詳細ダイアログ */}
       <Dialog open={!!detailOrder} onOpenChange={(open: boolean) => !open && setDetailOrder(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto" aria-labelledby="dialog-title" aria-describedby="dialog-description">
           {detailOrder && (
             <div>
               <DialogHeader>
-                <DialogTitle className="flex items-center">
-                  <span className="text-xl">注文詳細</span>
+                <DialogTitle id="dialog-title" className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <span className="text-lg sm:text-xl">注文詳細</span>
                   <Badge className={`ml-3 ${getStatusLabelInfo(detailOrder.status as OrderStatus).className}`}>
                     <div className="flex items-center">
                       {statusIcons[detailOrder.status as OrderStatus]}
@@ -604,13 +590,13 @@ export default function Admin() {
                     </div>
                   </Badge>
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription id="dialog-description" className="text-sm sm:text-base">
                   注文ID: #{detailOrder.id} | 呼出番号: <span className="font-bold text-[#e80113]">{detailOrder.callNumber}</span> | {new Date(detailOrder.createdAt).toLocaleString()}
                 </DialogDescription>
               </DialogHeader>
               
               {/* 呼出番号と受取時間のバナー */}
-              <div className="bg-[#fff9dc] p-4 rounded-lg border border-[#e80113] my-4 flex flex-col lg:flex-row lg:items-center lg:justify-between">
+              <div className="bg-[#fff9dc] p-4 rounded-lg border border-[#e80113] my-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex items-center space-x-4 mb-3 lg:mb-0">
                   <div className="bg-white p-3 rounded-lg shadow-md border border-[#e80113]">
                     <div className="text-xs text-center text-gray-500">呼出番号</div>
@@ -643,33 +629,33 @@ export default function Admin() {
                         onValueChange={(value: string) => handleStatusChange(detailOrder.id, value)}
                         className="space-y-3"
                       >
-                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'pending' ? 'bg-gray-50 border border-gray-200' : ''}`}>
-                          <RadioGroupItem value="pending" id={`detail-pending-${detailOrder.id}`} />
-                          <Label htmlFor={`detail-pending-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                        <div className={`flex items-center space-x-2 p-3 rounded ${detailOrder.status === 'pending' ? 'bg-gray-50 border border-gray-200' : ''}`}>
+                          <RadioGroupItem value="pending" id={`detail-pending-${detailOrder.id}`} className="focus:ring-2 focus:ring-[#e80113]" />
+                          <Label htmlFor={`detail-pending-${detailOrder.id}`} className="flex items-center cursor-pointer text-base sm:text-sm">
                             <Clock className="w-4 h-4 mr-2 text-gray-600" />
                             支払い待ち
                           </Label>
                         </div>
                         
-                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'paid' ? 'bg-yellow-50 border border-yellow-200' : ''}`}>
-                          <RadioGroupItem value="paid" id={`detail-paid-${detailOrder.id}`} />
-                          <Label htmlFor={`detail-paid-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                        <div className={`flex items-center space-x-2 p-3 rounded ${detailOrder.status === 'paid' ? 'bg-yellow-50 border border-yellow-200' : ''}`}>
+                          <RadioGroupItem value="paid" id={`detail-paid-${detailOrder.id}`} className="focus:ring-2 focus:ring-[#e80113]" />
+                          <Label htmlFor={`detail-paid-${detailOrder.id}`} className="flex items-center cursor-pointer text-base sm:text-sm">
                             <Clock className="w-4 h-4 mr-2 text-[#e80113]" />
                             支払い済み
                           </Label>
                         </div>
                         
-                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'ready' ? 'bg-green-50 border border-green-200' : ''}`}>
-                          <RadioGroupItem value="ready" id={`detail-ready-${detailOrder.id}`} />
-                          <Label htmlFor={`detail-ready-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                        <div className={`flex items-center space-x-2 p-3 rounded ${detailOrder.status === 'ready' ? 'bg-green-50 border border-green-200' : ''}`}>
+                          <RadioGroupItem value="ready" id={`detail-ready-${detailOrder.id}`} className="focus:ring-2 focus:ring-[#e80113]" />
+                          <Label htmlFor={`detail-ready-${detailOrder.id}`} className="flex items-center cursor-pointer text-base sm:text-sm">
                             <BowlSteamSpinner size="xs" className="mr-2 text-green-600" />
                             受取可能
                           </Label>
                         </div>
                         
-                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'completed' ? 'bg-green-50 border border-green-200' : ''}`}>
-                          <RadioGroupItem value="completed" id={`detail-completed-${detailOrder.id}`} />
-                          <Label htmlFor={`detail-completed-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                        <div className={`flex items-center space-x-2 p-3 rounded ${detailOrder.status === 'completed' ? 'bg-green-50 border border-green-200' : ''}`}>
+                          <RadioGroupItem value="completed" id={`detail-completed-${detailOrder.id}`} className="focus:ring-2 focus:ring-[#e80113]" />
+                          <Label htmlFor={`detail-completed-${detailOrder.id}`} className="flex items-center cursor-pointer text-base sm:text-sm">
                             <svg className="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
@@ -677,17 +663,17 @@ export default function Admin() {
                           </Label>
                         </div>
                         
-                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'cancelled' ? 'bg-red-50 border border-red-200' : ''}`}>
-                          <RadioGroupItem value="cancelled" id={`detail-cancelled-${detailOrder.id}`} />
-                          <Label htmlFor={`detail-cancelled-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                        <div className={`flex items-center space-x-2 p-3 rounded ${detailOrder.status === 'cancelled' ? 'bg-red-50 border border-red-200' : ''}`}>
+                          <RadioGroupItem value="cancelled" id={`detail-cancelled-${detailOrder.id}`} className="focus:ring-2 focus:ring-[#e80113]" />
+                          <Label htmlFor={`detail-cancelled-${detailOrder.id}`} className="flex items-center cursor-pointer text-base sm:text-sm">
                             <AlertCircle className="w-4 h-4 mr-2 text-red-600" />
                             キャンセル
                           </Label>
                         </div>
                         
-                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'refunded' ? 'bg-red-50 border border-red-200' : ''}`}>
-                          <RadioGroupItem value="refunded" id={`detail-refunded-${detailOrder.id}`} />
-                          <Label htmlFor={`detail-refunded-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                        <div className={`flex items-center space-x-2 p-3 rounded ${detailOrder.status === 'refunded' ? 'bg-red-50 border border-red-200' : ''}`}>
+                          <RadioGroupItem value="refunded" id={`detail-refunded-${detailOrder.id}`} className="focus:ring-2 focus:ring-[#e80113]" />
+                          <Label htmlFor={`detail-refunded-${detailOrder.id}`} className="flex items-center cursor-pointer text-base sm:text-sm">
                             <AlertCircle className="w-4 h-4 mr-2 text-red-600" />
                             返金済み
                           </Label>
@@ -720,7 +706,7 @@ export default function Admin() {
                             <div className="flex flex-wrap gap-1">
                               {item.size && (
                                 <span className="text-xs bg-white px-2 py-0.5 rounded-md border border-gray-200">
-                                  サイズ: {item.size}
+                                  <span aria-label={`サイズ: ${item.size}`}>サイズ: {item.size}</span>
                                 </span>
                               )}
                               {item.customizations && item.customizations.map((customization, idx) => (
@@ -738,12 +724,19 @@ export default function Admin() {
               </div>
               
               <div className="pt-2 flex justify-end mt-4">
-                <Button size="lg" onClick={() => setDetailOrder(null)} className="px-6 py-3 text-base min-h-[48px]">閉じる</Button>
+                <Button 
+                  size="lg" 
+                  onClick={() => setDetailOrder(null)} 
+                  className="px-6 py-3 text-base min-h-[48px] focus:ring-2 focus:ring-[#e80113] focus:ring-offset-2"
+                  aria-label="詳細ダイアログを閉じる"
+                >
+                  閉じる
+                </Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </main>
   );
 }

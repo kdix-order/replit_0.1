@@ -3,6 +3,7 @@
  * アクセシビリティ向上のためのキーボード操作をサポート
  */
 import { useEffect, useRef, useCallback } from 'react';
+import { TIME_CONSTANTS } from '@/constants/admin';
 
 /**
  * フォーカストラップを実装するフック
@@ -195,7 +196,7 @@ export function useAnnounce() {
         if (announceRef.current) {
           announceRef.current.textContent = '';
         }
-      }, 1000);
+      }, TIME_CONSTANTS.ANNOUNCE_CLEAR_DELAY);
     }
   }, []);
   

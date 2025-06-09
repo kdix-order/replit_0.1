@@ -3,6 +3,7 @@
  * 統一的なエラー処理とトースト表示を提供します
  */
 import { toast } from "@/hooks/use-toast";
+import { TIME_CONSTANTS } from "@/constants/admin";
 
 interface ErrorHandlerOptions {
   defaultMessage?: string;
@@ -21,7 +22,7 @@ export function handleError(
 ): void {
   const {
     defaultMessage = "エラーが発生しました",
-    duration = 5000,
+    duration = TIME_CONSTANTS.TOAST_DURATION.ERROR,
     showToast = true
   } = options;
 
@@ -59,7 +60,7 @@ export function handleError(
 export function showSuccessToast(
   title: string,
   description?: string,
-  duration: number = 3000
+  duration: number = TIME_CONSTANTS.TOAST_DURATION.SUCCESS
 ): void {
   toast({
     title,
@@ -77,7 +78,7 @@ export function showSuccessToast(
 export function showWarningToast(
   title: string,
   description?: string,
-  duration: number = 4000
+  duration: number = TIME_CONSTANTS.TOAST_DURATION.ERROR
 ): void {
   toast({
     title,
