@@ -22,6 +22,9 @@ import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useStoreSettings, useUpdateStoreSettings } from "@/hooks/use-store-settings";
 import { Switch } from "@/components/ui/switch";
 import { OrderStatusTracker } from "@/components/order-status-tracker";
+import { AdminHeader } from "@/components/admin/admin-header";
+import { StoreSettingsCard } from "@/components/admin/store-settings-card";
+import { OrderFilters } from "@/components/admin/order-filters";
 import { getValidNextStatuses, isFinalStatus, getStatusLabel, isUndoTransition, getStatusLabelInfo, type OrderStatus } from "@/utils/orderStatus";
 
 type OrderItem = {
@@ -484,135 +487,34 @@ export default function Admin() {
     );
   }
 
+  const handleRefresh = useCallback(() => {
+    refetch();
+    setShowRefreshAnimation(true);
+    setTimeout(() => setShowRefreshAnimation(false), 2000);
+  }, [refetch]);
+
+  const handleStoreSettingsToggle = useCallback(async (accepting: boolean) => {
+    await updateStoreSettings(accepting);
+    await refetchStoreSettings();
+  }, [updateStoreSettings, refetchStoreSettings]);
+
   return (
     <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
       {/* Header section */}
-      <div className="text-center mb-4 bg-[#fee10b] py-4 rounded-lg shadow-md">
-        <h1 className="text-3xl font-bold text-black mb-2">味店焼マン - 管理画面</h1>
-        <div className="flex justify-center">
-          <hr className="w-20 border-[#e80113] border-t-2 mb-3" />
-        </div>
-        <div className="flex flex-col items-center justify-center space-y-3">
-          <div className="flex flex-wrap justify-center items-center gap-2">
-            <span className="text-sm bg-[#e80113] text-white px-3 py-1 rounded-md flex items-center">
-              <Clock className="w-4 h-4 mr-1" />
-              現在の時刻: {currentTime.toLocaleTimeString()}
-            </span>
-            
-            <Button
-              size="lg"
-              onClick={() => {
-                refetch();
-                setShowRefreshAnimation(true);
-                setTimeout(() => setShowRefreshAnimation(false), 2000);
-              }}
-              className="bg-white text-[#e80113] border-2 border-[#e80113] hover:bg-[#e80113] hover:text-white px-6 py-3 text-base"
-              disabled={isFetching}
-            >
-              <RefreshCw className={`mr-2 h-5 w-5 ${isFetching || showRefreshAnimation ? 'animate-spin' : ''}`} />
-              {isFetching ? '更新中...' : '最新の情報に更新'}
-            </Button>
-          </div>
-          <div className="text-xs text-gray-700 bg-white px-3 py-1 rounded-full shadow-sm">
-            <span className={`transition-opacity duration-300 ${showRefreshAnimation ? 'opacity-100 font-bold text-[#e80113]' : 'opacity-80'}`}>
-              最終更新: {lastRefreshTime.toLocaleTimeString()} 
-              {showRefreshAnimation && <span className="ml-2 font-bold text-green-600">✓ 更新完了!</span>}
-            </span>
-            <span className="ml-2 text-gray-500">(1分ごとに自動更新)</span>
-          </div>
-        </div>
-      </div>
+      <AdminHeader
+        currentTime={currentTime}
+        lastRefreshTime={lastRefreshTime}
+        showRefreshAnimation={showRefreshAnimation}
+        isFetching={isFetching}
+        onRefresh={handleRefresh}
+      />
 
       {/* Store settings section */}
-      <Card className="border-2 border-gray-100 shadow-md overflow-hidden mb-6">
-        <CardHeader className="bg-[#e80113] text-white py-4 px-6">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg font-bold">店舗設定</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-bold mb-2">注文受付の状態</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                注文の受付を一時的に停止または再開します。停止中は新規注文ができなくなります。
-              </p>
-              <div className="flex flex-col">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Switch 
-                    id="accepting-orders"
-                    checked={isAcceptingOrders}
-                    onCheckedChange={async (checked: boolean) => {
-                      try {
-                        await updateStoreSettings(checked);
-                        await refetchStoreSettings();
-                        // 店舗設定のトースト表示を削除
-                      } catch (error) {
-                        console.error("Store settings update error:", error);
-                        // エラートースト表示を削除
-                      }
-                    }}
-                  />
-                  <Label htmlFor="accepting-orders" className="cursor-pointer">
-                    {isAcceptingOrders 
-                      ? <span className="flex items-center text-green-600 font-bold"><PlayCircle className="w-4 h-4 mr-1" /> 注文受付中</span> 
-                      : <span className="flex items-center text-red-600 font-bold"><PauseCircle className="w-4 h-4 mr-1" /> 注文停止中</span>
-                    }
-                  </Label>
-                </div>
-                
-                <div className="flex mt-2">
-                  <Button 
-                    size="lg" 
-                    onClick={async () => {
-                      try {
-                        await updateStoreSettings(true);
-                        await refetchStoreSettings();
-                        // 受付開始のトースト表示を削除
-                      } catch (error) {
-                        console.error("Error enabling order acceptance:", error);
-                        // エラートースト表示を削除
-                      }
-                    }}
-                    className="mr-3 bg-green-600 hover:bg-green-700 text-white px-6 py-3 text-base min-h-[48px]"
-                    disabled={isAcceptingOrders}
-                  >
-                    <PlayCircle className="w-5 h-5 mr-2" /> 受付開始
-                  </Button>
-                  
-                  <Button 
-                    size="lg"
-                    onClick={async () => {
-                      try {
-                        await updateStoreSettings(false);
-                        await refetchStoreSettings();
-                        // 受付停止のトースト表示を削除
-                      } catch (error) {
-                        console.error("Error disabling order acceptance:", error);
-                        // エラートースト表示を削除
-                      }
-                    }}
-                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 text-base min-h-[48px]"
-                    disabled={!isAcceptingOrders}
-                  >
-                    <PauseCircle className="w-5 h-5 mr-2" /> 受付停止
-                  </Button>
-                </div>
-              </div>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-center">
-                <div className={`text-2xl font-bold mb-1 ${isAcceptingOrders ? 'text-green-600' : 'text-red-600'}`}>
-                  {isAcceptingOrders ? '営業中' : '注文停止中'}
-                </div>
-                <p className="text-sm text-gray-500">
-                  最終更新: {storeSettings ? new Date(storeSettings.updatedAt).toLocaleString() : ''}
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <StoreSettingsCard
+        isAcceptingOrders={isAcceptingOrders}
+        storeSettings={storeSettings}
+        onToggle={handleStoreSettingsToggle}
+      />
 
       {/* Orders tab */}
       <Tabs defaultValue="orders" className="mb-8">
@@ -641,94 +543,17 @@ export default function Admin() {
                     </Badge>
                   )}
                 </CardTitle>
-                <div className="flex flex-wrap items-center gap-2">
-                  {/* 検索ボックス */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="番号・商品名で検索"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 pr-10 py-3 rounded-md border-2 border-gray-300 text-gray-800 text-base w-full sm:w-64 min-h-[48px]"
-                    />
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery('')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center"
-                      >
-                        <span className="text-2xl">×</span>
-                      </button>
-                    )}
-                  </div>
-                  
-                  {/* 緊急フィルター */}
-                  <Button
-                    size="lg"
-                    variant={showOnlyUrgent ? "default" : "outline"}
-                    onClick={() => setShowOnlyUrgent(!showOnlyUrgent)}
-                    className={`px-6 py-3 text-base min-h-[48px] border-2 ${
-                      showOnlyUrgent 
-                        ? "bg-red-600 hover:bg-red-700 text-white border-red-600" 
-                        : "bg-white text-gray-800 border-gray-300"
-                    }`}
-                  >
-                    <AlertCircle className="w-5 h-5 mr-2" />
-                    急ぎ
-                  </Button>
-                  <Select
-                    value={filterStatus}
-                    onValueChange={setFilterStatus}
-                  >
-                    <SelectTrigger className="w-48 bg-white text-gray-800 border-2 border-gray-300 h-12 text-base">
-                      <div className="flex items-center">
-                        <Filter className="w-4 h-4 mr-1" />
-                        <SelectValue placeholder="すべて表示" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">すべての注文</SelectItem>
-                      <SelectItem value="pending">
-                        <div className="flex items-center">
-                          <Clock className="w-4 h-4 mr-1" />
-                          支払い待ち ({orderCounts.pending})
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="paid">
-                        <div className="flex items-center">
-                          <Clock className="w-4 h-4 mr-1" />
-                          支払い済み ({orderCounts.paid})
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="ready">
-                        <div className="flex items-center">
-                          <BowlSteamSpinner size="xs" className="mr-1" />
-                          受取可能 ({orderCounts.ready})
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="completed">
-                        <div className="flex items-center">
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          完了 ({orderCounts.completed})
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => setSortNewest(!sortNewest)}
-                    className="bg-white hover:bg-gray-50 text-gray-800 border-2 border-gray-300 px-6 py-3 text-base min-h-[48px]"
-                  >
-                    {sortNewest ? "新しい順" : "古い順"}
-                    <svg className={`ml-1 h-4 w-4 ${sortNewest ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                    </svg>
-                  </Button>
-                </div>
+                <OrderFilters
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  showOnlyUrgent={showOnlyUrgent}
+                  onUrgentToggle={() => setShowOnlyUrgent(!showOnlyUrgent)}
+                  filterStatus={filterStatus}
+                  onStatusChange={setFilterStatus}
+                  sortNewest={sortNewest}
+                  onSortToggle={() => setSortNewest(!sortNewest)}
+                  orderCounts={orderCounts}
+                />
               </div>
             </CardHeader>
             
