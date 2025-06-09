@@ -20,6 +20,7 @@ import orders from "./routes/orders";
 import payments from "./routes/payments";
 import products from "./routes/products";
 import timeslots from "./routes/timeslots";
+import testPrint from "./routes/test-print";
 
 /**
  * すべてのAPIルートを登録する関数
@@ -45,6 +46,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/", payments);
   app.use("/", products);
   app.use("/", timeslots);
+  
+  // テスト用エンドポイント（開発環境のみ）
+  if (process.env.NODE_ENV !== 'production') {
+    app.use("/", testPrint);
+  }
 
   const httpServer = createServer(app);
 

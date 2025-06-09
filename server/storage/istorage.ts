@@ -5,7 +5,7 @@ import type {
     InsertUser, Order, OrderWithTimeSlot,
     Product, StoreSetting, TimeSlot,
     TimeSlotWithAvailability,
-    User
+    User, OrderStatusHistory
 } from "@shared/schema";
 
 export interface IStorage {
@@ -37,7 +37,8 @@ export interface IStorage {
     getOrders(): Promise<OrderWithTimeSlot[]>;
     getOrdersByUser(userId: string): Promise<OrderWithTimeSlot[]>;
     getOrder(id: string): Promise<Order | undefined>;
-    updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
+    updateOrderStatus(id: string, status: string, changedBy: string, reason?: string): Promise<Order | undefined>;
+    getOrderStatusHistory(orderId: string): Promise<OrderStatusHistory[]>;
 
 
     // Store settings methods

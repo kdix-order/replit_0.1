@@ -68,12 +68,16 @@ export const insertTimeSlotSchema = createInsertSchema(timeSlots).pick({
   available: true,
 });
 
+// Order status type
+export const ORDER_STATUSES = ["pending", "paid", "ready", "completed", "cancelled", "refunded"] as const;
+export type OrderStatus = typeof ORDER_STATUSES[number];
+
 // Order model
 export const orders = pgTable("orders", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull(),
   callNumber: serial("call_number").notNull(),
-  status: text("status").notNull().default("new"), // new, paid, preparing, completed
+  status: text("status").notNull().default("pending"), // pending, paid, ready, completed, cancelled, refunded
   total: integer("total").notNull(), // Total price in yen
   timeSlotId: uuid("time_slot_id").notNull().references(() => timeSlots.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow(),
@@ -162,3 +166,25 @@ export const insertStoreSettingsSchema = createInsertSchema(storeSettings).pick(
 
 export type StoreSetting = typeof storeSettings.$inferSelect;
 export type InsertStoreSetting = z.infer<typeof insertStoreSettingsSchema>;
+
+// Order status history model
+export const orderStatusHistory = pgTable("order_status_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status").notNull(),
+  changedBy: uuid("changed_by").notNull().references(() => users.id),
+  changedAt: timestamp("changed_at").defaultNow(),
+  reason: text("reason"),
+});
+
+export const insertOrderStatusHistorySchema = createInsertSchema(orderStatusHistory).pick({
+  orderId: true,
+  fromStatus: true,
+  toStatus: true,
+  changedBy: true,
+  reason: true,
+});
+
+export type OrderStatusHistory = typeof orderStatusHistory.$inferSelect;
+export type InsertOrderStatusHistory = z.infer<typeof insertOrderStatusHistorySchema>;
