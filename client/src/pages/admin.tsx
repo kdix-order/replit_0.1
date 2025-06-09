@@ -13,16 +13,18 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getCustomizationLabel } from "@/lib/utils";
 import { BowlSteamSpinner } from "@/components/ui/food-spinner";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter, Clock, AlertCircle, PauseCircle, PlayCircle, Calendar } from "lucide-react";
+import { RefreshCw, Filter, Clock, AlertCircle, PauseCircle, PlayCircle, Calendar, Search, CheckSquare, Square, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useStoreSettings, useUpdateStoreSettings } from "@/hooks/use-store-settings";
 import { Switch } from "@/components/ui/switch";
 import { OrderStatusTracker } from "@/components/order-status-tracker";
+import { getValidNextStatuses, isFinalStatus, getStatusLabel, getStatusBgClass, isUndoTransition, getStatusLabelInfo, type OrderStatus } from "@/utils/orderStatus";
+import { OrderStatsCard } from "@/components/admin/order-stats-card";
 
 type OrderItem = {
   id: string;
@@ -37,7 +39,7 @@ type Order = {
   id: string;
   userId: string;
   callNumber: number;
-  status: "new" | "preparing" | "completed";
+  status: "pending" | "paid" | "ready" | "completed" | "cancelled" | "refunded";
   total: number;
   timeSlot: {
     id: string;
@@ -47,11 +49,14 @@ type Order = {
   items: OrderItem[];
 };
 
-const statusLabels = {
-  new: { text: "受付済み", className: "bg-[#fee10b] text-black", icon: <Clock className="w-4 h-4 mr-1" /> },
-  paid: { text: "支払い済み", className: "bg-[#fee10b] text-black", icon: <Clock className="w-4 h-4 mr-1" /> },
-  preparing: { text: "準備中", className: "bg-blue-100 text-blue-800", icon: <BowlSteamSpinner size="xs" className="mr-1 text-blue-800" /> },
-  completed: { text: "完了", className: "bg-green-100 text-green-800", icon: null }
+// ステータスごとのアイコンを定義
+const statusIcons: Record<OrderStatus, JSX.Element | null> = {
+  pending: <Clock className="w-4 h-4 mr-1" />,
+  paid: <Clock className="w-4 h-4 mr-1" />,
+  ready: null,
+  completed: null,
+  cancelled: null,
+  refunded: null
 };
 
 /**
@@ -62,15 +67,13 @@ function OrderItem({
   order, 
   handleStatusChange, 
   updateOrderStatusMutation, 
-  setDetailOrder, 
-  statusLabels,
+  setDetailOrder,
   getCustomizationLabel
 }: { 
   order: Order; 
   handleStatusChange: (orderId: string, status: string) => void;
   updateOrderStatusMutation: any;
   setDetailOrder: (order: Order | null) => void;
-  statusLabels: any;
   getCustomizationLabel: (customization: string) => string;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -86,22 +89,22 @@ function OrderItem({
       >
         <div className="flex items-center justify-between">
           {/* 左側: 呼出番号 */}
-          <div className="flex-shrink-0 w-1/3 md:w-1/5">
-            <div className="bg-[#fff9dc] px-3 py-2 rounded-lg border border-[#e80113] shadow-sm flex flex-col items-center justify-center">
+          <div className="flex-shrink-0 w-2/5 md:w-1/4 lg:w-1/5">
+            <div className="bg-[#fff9dc] px-4 py-3 rounded-lg border-2 border-[#e80113] shadow-sm flex flex-col items-center justify-center">
               <div className="text-xs text-gray-600">呼出番号</div>
-              <div className="font-bold text-3xl text-[#e80113]">{order.callNumber}</div>
+              <div className="font-bold text-4xl text-[#e80113]">{order.callNumber}</div>
             </div>
           </div>
           
           {/* 中央: 注文内容の概要 */}
-          <div className="flex-grow px-3">
+          <div className="flex-grow px-4 md:px-6">
             <div className="flex flex-col">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-semibold">注文内容 <span className="text-[#e80113]">¥{order.total}</span></span>
-                <Badge className={statusLabels[order.status].className}>
+                <Badge className={getStatusLabelInfo(order.status as OrderStatus).className}>
                   <div className="flex items-center">
-                    {statusLabels[order.status].icon}
-                    {statusLabels[order.status].text}
+                    {statusIcons[order.status as OrderStatus]}
+                    {getStatusLabelInfo(order.status as OrderStatus).text}
                   </div>
                 </Badge>
               </div>
@@ -142,7 +145,7 @@ function OrderItem({
       {isExpanded && (
         <div className="border-t border-gray-200 p-4 bg-white">
           {/* 注文情報ヘッダー */}
-          <div className="mb-3 bg-gray-50 p-2 rounded flex flex-wrap gap-2 md:gap-4 text-sm">
+          <div className="mb-3 bg-gray-50 p-3 rounded flex flex-wrap gap-3 lg:gap-4 text-sm">
             <div className="flex items-center">
               <span className="text-gray-500 mr-1">注文ID:</span>
               <span className="font-medium">#{order.id}</span>
@@ -154,16 +157,16 @@ function OrderItem({
           </div>
           
           {/* 進捗ステータストラッカー */}
-          <div className="mb-4">
+          <div className="mb-4 transform scale-110 origin-top">
             <OrderStatusTracker status={order.status} />
           </div>
           
           {/* 注文内容詳細 */}
-          <div className="bg-gray-50 rounded-lg p-3 mb-4">
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
             <h4 className="font-medium mb-2 text-gray-700">注文内容</h4>
             <div className="space-y-2">
               {order.items.map((item: OrderItem, index: number) => (
-                <div key={index} className="bg-white p-2 rounded-md border border-gray-100">
+                <div key={index} className="bg-white p-3 rounded-md border border-gray-100">
                   <div className="flex justify-between items-center">
                     <div className="font-medium">{item.name}</div>
                     <div className="text-sm">
@@ -198,40 +201,52 @@ function OrderItem({
           {/* 操作ボタン */}
           <div className="flex justify-between items-center">
             <Button 
-              size="sm" 
+              size="lg" 
               variant="outline"
               onClick={() => setDetailOrder(order)}
-              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+              className="bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-3 text-base min-h-[48px]"
             >
-              詳細ダイアログを開く
+              詳細を表示
             </Button>
             
-            <Select
-              value={order.status}
-              onValueChange={(value) => handleStatusChange(order.id, value)}
-              disabled={updateOrderStatusMutation.isPending}
-            >
-              <SelectTrigger className={`w-36 h-9 
-                ${order.status === 'new' ? 'bg-[#fee10b] text-black border-[#e80113]' : 
-                order.status === 'preparing' ? 'bg-blue-100 text-blue-800 border-blue-300' : 
-                'bg-green-100 text-green-800 border-green-300'}`}
+            {isFinalStatus(order.status as OrderStatus) ? (
+              <Badge className={getStatusLabelInfo(order.status as OrderStatus).className}>
+                {statusIcons[order.status as OrderStatus]}
+                {getStatusLabelInfo(order.status as OrderStatus).text}
+              </Badge>
+            ) : (
+              <Select
+                value={order.status}
+                onValueChange={(value) => handleStatusChange(order.id, value)}
+                disabled={updateOrderStatusMutation.isPending}
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="new" className="flex items-center">
-                  <Clock className="w-4 h-4 mr-1 inline" /> 受付済み
-                </SelectItem>
-                <SelectItem value="preparing" className="flex items-center">
-                  <BowlSteamSpinner size="xs" className="mr-1 inline" /> 準備中
-                </SelectItem>
-                <SelectItem value="completed" className="flex items-center">
-                  <svg className="w-4 h-4 mr-1 text-green-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg> 完了
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                <SelectTrigger className={`w-44 h-12 text-base 
+                  ${order.status === 'pending' ? 'bg-gray-100 text-gray-800 border-gray-300' :
+                  order.status === 'paid' ? 'bg-[#fee10b] text-black border-[#e80113]' : 
+                  order.status === 'ready' ? 'bg-green-100 text-green-800 border-green-300' :
+                  order.status === 'completed' ? 'bg-green-100 text-green-800 border-green-300' :
+                  order.status === 'cancelled' ? 'bg-red-100 text-red-800 border-red-300' :
+                  'bg-red-100 text-red-800 border-red-300'}`}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getValidNextStatuses(order.status as OrderStatus).map(status => (
+                    <SelectItem key={status} value={status} className="flex items-center">
+                      {status === 'paid' && <><Clock className="w-4 h-4 mr-1 inline" /> 支払い済み</>}
+                      {status === 'ready' && <><BowlSteamSpinner size="xs" className="mr-1 inline" /> 受取可能</>}
+                      {status === 'completed' && <>
+                        <svg className="w-4 h-4 mr-1 text-green-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg> 完了
+                      </>}
+                      {status === 'cancelled' && <><AlertCircle className="w-4 h-4 mr-1 inline text-red-600" /> キャンセル</>}
+                      {status === 'refunded' && <><AlertCircle className="w-4 h-4 mr-1 inline text-red-600" /> 返金済み</>}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
       )}
@@ -253,6 +268,9 @@ export default function Admin() {
   const [sortNewest, setSortNewest] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [showOnlyUrgent, setShowOnlyUrgent] = useState(false);
   
   // 店舗設定の取得
   const { storeSettings, isAcceptingOrders, refetch: refetchStoreSettings } = useStoreSettings();
@@ -307,7 +325,7 @@ export default function Admin() {
       // 注文情報を取得
       const order = orders?.find(o => o.id === variables.id);
       const callNumber = order ? order.callNumber : "不明";
-      const statusText = statusLabels[variables.status as keyof typeof statusLabels]?.text || variables.status;
+      const statusText = getStatusLabelInfo(variables.status as OrderStatus).text;
       
       // 明示的にトーストを表示
       toast({
@@ -330,8 +348,21 @@ export default function Admin() {
   });
 
   // Handler for status change
-  const handleStatusChange = (orderId: string, status: string) => {
-    updateOrderStatusMutation.mutate({ id: orderId, status });
+  const handleStatusChange = (orderId: string, newStatus: string) => {
+    const order = orders?.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const currentStatus = order.status as OrderStatus;
+    const isUndo = isUndoTransition(currentStatus, newStatus as OrderStatus);
+    
+    const message = isUndo 
+      ? `誤操作の可能性があります。\n本当にステータスを「${getStatusLabel(currentStatus)}」から「${getStatusLabel(newStatus as OrderStatus)}」に戻しますか？`
+      : `注文のステータスを「${getStatusLabel(newStatus as OrderStatus)}」に変更しますか？`;
+    
+    if (!confirm(message)) {
+      return;
+    }
+    updateOrderStatusMutation.mutate({ id: orderId, status: newStatus });
   };
 
   // Filter and sort orders
@@ -340,9 +371,29 @@ export default function Admin() {
     
     let result = [...orders];
     
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((order: Order) => 
+        order.callNumber.toString().includes(query) ||
+        order.id.toLowerCase().includes(query) ||
+        order.items.some(item => item.name.toLowerCase().includes(query))
+      );
+    }
+    
     // Apply status filter
     if (filterStatus && filterStatus !== 'all') {
       result = result.filter((order: Order) => order.status === filterStatus);
+    }
+    
+    // Apply urgent filter (orders waiting > 10 minutes)
+    if (showOnlyUrgent) {
+      result = result.filter((order: Order) => {
+        const orderTime = new Date(order.createdAt).getTime();
+        const now = new Date().getTime();
+        const waitingMinutes = (now - orderTime) / 1000 / 60;
+        return (order.status === 'paid' || order.status === 'ready') && waitingMinutes > 10;
+      });
     }
     
     // Apply sorting
@@ -353,17 +404,28 @@ export default function Admin() {
     });
     
     return result;
-  }, [orders, filterStatus, sortNewest]);
+  }, [orders, filterStatus, sortNewest, searchQuery, showOnlyUrgent]);
 
   // Count orders by status
   const orderCounts = useMemo(() => {
-    if (!orders) return { new: 0, preparing: 0, completed: 0, total: 0 };
+    if (!orders) return { pending: 0, paid: 0, ready: 0, completed: 0, cancelled: 0, refunded: 0, total: 0, urgent: 0 };
     
-    return orders.reduce((acc: { new: number, preparing: number, completed: number, total: number }, order: Order) => {
-      acc[order.status as keyof typeof acc]++;
+    const now = new Date().getTime();
+    return orders.reduce((acc: any, order: Order) => {
+      if (acc[order.status] !== undefined) {
+        acc[order.status]++;
+      }
       acc.total++;
+      
+      // Count urgent orders
+      const orderTime = new Date(order.createdAt).getTime();
+      const waitingMinutes = (now - orderTime) / 1000 / 60;
+      if ((order.status === 'paid' || order.status === 'ready') && waitingMinutes > 10) {
+        acc.urgent++;
+      }
+      
       return acc;
-    }, { new: 0, preparing: 0, completed: 0, total: 0 });
+    }, { pending: 0, paid: 0, ready: 0, completed: 0, cancelled: 0, refunded: 0, total: 0, urgent: 0 });
   }, [orders]);
 
   // Redirect if not admin
@@ -375,7 +437,7 @@ export default function Admin() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto py-6 px-4 lg:px-8">
         <div className="text-center mb-8 bg-[#fee10b] py-6 rounded-lg shadow-md">
           <h1 className="text-3xl font-bold text-black mb-2">味店焼マン - 管理画面</h1>
           <div className="flex justify-center">
@@ -408,12 +470,12 @@ export default function Admin() {
   return (
     <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
       {/* Header section */}
-      <div className="text-center mb-6 bg-[#fee10b] py-6 rounded-lg shadow-md">
+      <div className="text-center mb-4 bg-[#fee10b] py-4 rounded-lg shadow-md">
         <h1 className="text-3xl font-bold text-black mb-2">味店焼マン - 管理画面</h1>
         <div className="flex justify-center">
           <hr className="w-20 border-[#e80113] border-t-2 mb-3" />
         </div>
-        <div className="flex flex-col items-center justify-center space-y-2">
+        <div className="flex flex-col items-center justify-center space-y-3">
           <div className="flex flex-wrap justify-center items-center gap-2">
             <span className="text-sm bg-[#e80113] text-white px-3 py-1 rounded-md flex items-center">
               <Clock className="w-4 h-4 mr-1" />
@@ -421,16 +483,16 @@ export default function Admin() {
             </span>
             
             <Button
-              size="sm"
+              size="lg"
               onClick={() => {
                 refetch();
                 setShowRefreshAnimation(true);
                 setTimeout(() => setShowRefreshAnimation(false), 2000);
               }}
-              className="bg-white text-[#e80113] border border-[#e80113] hover:bg-[#e80113] hover:text-white"
+              className="bg-white text-[#e80113] border-2 border-[#e80113] hover:bg-[#e80113] hover:text-white px-6 py-3 text-base"
               disabled={isFetching}
             >
-              <RefreshCw className={`mr-1 h-4 w-4 ${isFetching || showRefreshAnimation ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`mr-2 h-5 w-5 ${isFetching || showRefreshAnimation ? 'animate-spin' : ''}`} />
               {isFetching ? '更新中...' : '最新の情報に更新'}
             </Button>
           </div>
@@ -484,7 +546,7 @@ export default function Admin() {
                 
                 <div className="flex mt-2">
                   <Button 
-                    size="sm" 
+                    size="lg" 
                     onClick={async () => {
                       try {
                         await updateStoreSettings(true);
@@ -495,14 +557,14 @@ export default function Admin() {
                         // エラートースト表示を削除
                       }
                     }}
-                    className="mr-2 bg-green-600 hover:bg-green-700 text-white"
+                    className="mr-3 bg-green-600 hover:bg-green-700 text-white px-6 py-3 text-base min-h-[48px]"
                     disabled={isAcceptingOrders}
                   >
-                    <PlayCircle className="w-4 h-4 mr-1" /> 受付開始
+                    <PlayCircle className="w-5 h-5 mr-2" /> 受付開始
                   </Button>
                   
                   <Button 
-                    size="sm"
+                    size="lg"
                     onClick={async () => {
                       try {
                         await updateStoreSettings(false);
@@ -513,10 +575,10 @@ export default function Admin() {
                         // エラートースト表示を削除
                       }
                     }}
-                    className="bg-red-600 hover:bg-red-700 text-white"
+                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 text-base min-h-[48px]"
                     disabled={!isAcceptingOrders}
                   >
-                    <PauseCircle className="w-4 h-4 mr-1" /> 受付停止
+                    <PauseCircle className="w-5 h-5 mr-2" /> 受付停止
                   </Button>
                 </div>
               </div>
@@ -537,14 +599,14 @@ export default function Admin() {
 
       {/* Orders tab */}
       <Tabs defaultValue="orders" className="mb-8">
-        <TabsList className="w-full bg-gray-100 p-0.5 mb-6">
+        <TabsList className="w-full bg-gray-100 p-1 mb-6">
           <TabsTrigger 
             value="orders" 
-            className="flex-1 py-3 bg-white data-[state=active]:bg-[#e80113] data-[state=active]:text-white rounded-md"
+            className="flex-1 py-4 bg-white data-[state=active]:bg-[#e80113] data-[state=active]:text-white rounded-md text-base font-medium"
           >
             <div className="flex items-center justify-center">
               注文管理
-              <Badge className="ml-2 bg-gray-100 text-black">{orderCounts.total}</Badge>
+              <Badge className="ml-2 bg-gray-100 text-black text-base px-3 py-1">{orderCounts.total}</Badge>
             </div>
           </TabsTrigger>
         </TabsList>
@@ -553,13 +615,55 @@ export default function Admin() {
           <Card className="border-2 border-gray-100 shadow-md overflow-hidden">
             <CardHeader className="bg-[#e80113] text-white py-4 px-6">
               <div className="flex justify-between items-center">
-                <CardTitle className="text-lg font-bold">注文一覧</CardTitle>
-                <div className="flex space-x-2">
+                <CardTitle className="text-lg font-bold">
+                  注文一覧
+                  {orderCounts.urgent > 0 && (
+                    <Badge className="ml-2 bg-red-600 text-white animate-pulse">
+                      <Bell className="w-3 h-3 mr-1 inline" />
+                      {orderCounts.urgent}件の急ぎの注文
+                    </Badge>
+                  )}
+                </CardTitle>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* 検索ボックス */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="番号・商品名で検索"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 pr-10 py-3 rounded-md border-2 border-gray-300 text-gray-800 text-base w-full sm:w-64 min-h-[48px]"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center"
+                      >
+                        <span className="text-2xl">×</span>
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* 緊急フィルター */}
+                  <Button
+                    size="lg"
+                    variant={showOnlyUrgent ? "default" : "outline"}
+                    onClick={() => setShowOnlyUrgent(!showOnlyUrgent)}
+                    className={`px-6 py-3 text-base min-h-[48px] border-2 ${
+                      showOnlyUrgent 
+                        ? "bg-red-600 hover:bg-red-700 text-white border-red-600" 
+                        : "bg-white text-gray-800 border-gray-300"
+                    }`}
+                  >
+                    <AlertCircle className="w-5 h-5 mr-2" />
+                    急ぎ
+                  </Button>
                   <Select
                     value={filterStatus}
                     onValueChange={setFilterStatus}
                   >
-                    <SelectTrigger className="w-40 bg-white text-gray-800 border-none">
+                    <SelectTrigger className="w-48 bg-white text-gray-800 border-2 border-gray-300 h-12 text-base">
                       <div className="flex items-center">
                         <Filter className="w-4 h-4 mr-1" />
                         <SelectValue placeholder="すべて表示" />
@@ -567,16 +671,22 @@ export default function Admin() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">すべての注文</SelectItem>
-                      <SelectItem value="new">
+                      <SelectItem value="pending">
                         <div className="flex items-center">
                           <Clock className="w-4 h-4 mr-1" />
-                          受付済み ({orderCounts.new})
+                          支払い待ち ({orderCounts.pending})
                         </div>
                       </SelectItem>
-                      <SelectItem value="preparing">
+                      <SelectItem value="paid">
+                        <div className="flex items-center">
+                          <Clock className="w-4 h-4 mr-1" />
+                          支払い済み ({orderCounts.paid})
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="ready">
                         <div className="flex items-center">
                           <BowlSteamSpinner size="xs" className="mr-1" />
-                          準備中 ({orderCounts.preparing})
+                          受取可能 ({orderCounts.ready})
                         </div>
                       </SelectItem>
                       <SelectItem value="completed">
@@ -591,10 +701,10 @@ export default function Admin() {
                   </Select>
                   
                   <Button
-                    size="sm"
+                    size="lg"
                     variant="outline"
                     onClick={() => setSortNewest(!sortNewest)}
-                    className="bg-white hover:bg-gray-50 text-gray-800 border-none"
+                    className="bg-white hover:bg-gray-50 text-gray-800 border-2 border-gray-300 px-6 py-3 text-base min-h-[48px]"
                   >
                     {sortNewest ? "新しい順" : "古い順"}
                     <svg className={`ml-1 h-4 w-4 ${sortNewest ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -623,7 +733,6 @@ export default function Admin() {
                       handleStatusChange={handleStatusChange}
                       updateOrderStatusMutation={updateOrderStatusMutation}
                       setDetailOrder={setDetailOrder}
-                      statusLabels={statusLabels}
                       getCustomizationLabel={getCustomizationLabel}
                     />
                   ))}
@@ -636,16 +745,16 @@ export default function Admin() {
       
       {/* 注文詳細ダイアログ */}
       <Dialog open={!!detailOrder} onOpenChange={(open) => !open && setDetailOrder(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           {detailOrder && (
             <div>
               <DialogHeader>
                 <DialogTitle className="flex items-center">
                   <span className="text-xl">注文詳細</span>
-                  <Badge className={`ml-3 ${statusLabels[detailOrder.status].className}`}>
+                  <Badge className={`ml-3 ${getStatusLabelInfo(detailOrder.status as OrderStatus).className}`}>
                     <div className="flex items-center">
-                      {statusLabels[detailOrder.status].icon}
-                      {statusLabels[detailOrder.status].text}
+                      {statusIcons[detailOrder.status as OrderStatus]}
+                      {getStatusLabelInfo(detailOrder.status as OrderStatus).text}
                     </div>
                   </Badge>
                 </DialogTitle>
@@ -655,8 +764,8 @@ export default function Admin() {
               </DialogHeader>
               
               {/* 呼出番号と受取時間のバナー */}
-              <div className="bg-[#fff9dc] p-4 rounded-lg border border-[#e80113] my-4 flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center space-x-4 mb-3 md:mb-0">
+              <div className="bg-[#fff9dc] p-4 rounded-lg border border-[#e80113] my-4 flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-center space-x-4 mb-3 lg:mb-0">
                   <div className="bg-white p-3 rounded-lg shadow-md border border-[#e80113]">
                     <div className="text-xs text-center text-gray-500">呼出番号</div>
                     <div className="text-4xl font-bold text-[#e80113] text-center">{detailOrder.callNumber}</div>
@@ -675,7 +784,7 @@ export default function Admin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
                 {/* ステータス更新パネル */}
                 <div>
                   <Card className="overflow-hidden">
@@ -688,19 +797,27 @@ export default function Admin() {
                         onValueChange={(value) => handleStatusChange(detailOrder.id, value)}
                         className="space-y-3"
                       >
-                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'new' ? 'bg-yellow-50 border border-yellow-200' : ''}`}>
-                          <RadioGroupItem value="new" id={`detail-new-${detailOrder.id}`} />
-                          <Label htmlFor={`detail-new-${detailOrder.id}`} className="flex items-center cursor-pointer">
-                            <Clock className="w-4 h-4 mr-2 text-[#e80113]" />
-                            受付済み
+                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'pending' ? 'bg-gray-50 border border-gray-200' : ''}`}>
+                          <RadioGroupItem value="pending" id={`detail-pending-${detailOrder.id}`} />
+                          <Label htmlFor={`detail-pending-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                            <Clock className="w-4 h-4 mr-2 text-gray-600" />
+                            支払い待ち
                           </Label>
                         </div>
                         
-                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'preparing' ? 'bg-blue-50 border border-blue-200' : ''}`}>
-                          <RadioGroupItem value="preparing" id={`detail-preparing-${detailOrder.id}`} />
-                          <Label htmlFor={`detail-preparing-${detailOrder.id}`} className="flex items-center cursor-pointer">
-                            <BowlSteamSpinner size="xs" className="mr-2 text-blue-600" />
-                            準備中
+                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'paid' ? 'bg-yellow-50 border border-yellow-200' : ''}`}>
+                          <RadioGroupItem value="paid" id={`detail-paid-${detailOrder.id}`} />
+                          <Label htmlFor={`detail-paid-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                            <Clock className="w-4 h-4 mr-2 text-[#e80113]" />
+                            支払い済み
+                          </Label>
+                        </div>
+                        
+                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'ready' ? 'bg-green-50 border border-green-200' : ''}`}>
+                          <RadioGroupItem value="ready" id={`detail-ready-${detailOrder.id}`} />
+                          <Label htmlFor={`detail-ready-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                            <BowlSteamSpinner size="xs" className="mr-2 text-green-600" />
+                            受取可能
                           </Label>
                         </div>
                         
@@ -713,13 +830,29 @@ export default function Admin() {
                             完了
                           </Label>
                         </div>
+                        
+                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'cancelled' ? 'bg-red-50 border border-red-200' : ''}`}>
+                          <RadioGroupItem value="cancelled" id={`detail-cancelled-${detailOrder.id}`} />
+                          <Label htmlFor={`detail-cancelled-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                            <AlertCircle className="w-4 h-4 mr-2 text-red-600" />
+                            キャンセル
+                          </Label>
+                        </div>
+                        
+                        <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'refunded' ? 'bg-red-50 border border-red-200' : ''}`}>
+                          <RadioGroupItem value="refunded" id={`detail-refunded-${detailOrder.id}`} />
+                          <Label htmlFor={`detail-refunded-${detailOrder.id}`} className="flex items-center cursor-pointer">
+                            <AlertCircle className="w-4 h-4 mr-2 text-red-600" />
+                            返金済み
+                          </Label>
+                        </div>
                       </RadioGroup>
                     </CardContent>
                   </Card>
                 </div>
               
                 {/* 注文内容テーブル */}
-                <div className="md:col-span-2">
+                <div className="lg:col-span-2">
                   <Card className="overflow-hidden">
                     <CardHeader className="bg-[#e80113] text-white py-3 px-4">
                       <div className="flex justify-between items-center">
@@ -759,7 +892,7 @@ export default function Admin() {
               </div>
               
               <div className="pt-2 flex justify-end mt-4">
-                <Button onClick={() => setDetailOrder(null)}>閉じる</Button>
+                <Button size="lg" onClick={() => setDetailOrder(null)} className="px-6 py-3 text-base min-h-[48px]">閉じる</Button>
               </div>
             </div>
           )}

@@ -68,12 +68,16 @@ export const insertTimeSlotSchema = createInsertSchema(timeSlots).pick({
   available: true,
 });
 
+// Order status type
+export const ORDER_STATUSES = ["pending", "paid", "ready", "completed", "cancelled", "refunded"] as const;
+export type OrderStatus = typeof ORDER_STATUSES[number];
+
 // Order model
 export const orders = pgTable("orders", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull(),
   callNumber: serial("call_number").notNull(),
-  status: text("status").notNull().default("new"), // new, paid, preparing, completed
+  status: text("status").notNull().default("pending"), // pending, paid, ready, completed, cancelled, refunded
   total: integer("total").notNull(), // Total price in yen
   timeSlotId: uuid("time_slot_id").notNull().references(() => timeSlots.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow(),

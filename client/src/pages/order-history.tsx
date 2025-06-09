@@ -14,6 +14,7 @@ import { Clock, ChevronRight, Receipt, Eye, Ticket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { OrderDetailDialog } from "@/components/order-detail-dialog";
+import { getStatusLabelInfo, type OrderStatus } from "@/utils/orderStatus";
 
 type OrderItem = {
   id: string;
@@ -28,7 +29,7 @@ type Order = {
   id: string;
   userId: number;
   callNumber: number;
-  status: "new" | "preparing" | "completed";
+  status: "pending" | "paid" | "ready" | "completed" | "cancelled" | "refunded";
   total: number;
   timeSlot: {
     id: string;
@@ -38,12 +39,6 @@ type Order = {
   items: OrderItem[];
 };
 
-const statusLabels = {
-  new: { text: "受付済み", className: "bg-yellow-100 text-yellow-800" },
-  paid: { text: "支払い済み", className: "bg-yellow-100 text-yellow-800" },
-  preparing: { text: "準備中", className: "bg-blue-100 text-blue-800" },
-  completed: { text: "完了", className: "bg-green-100 text-green-800" }
-};
 
 /**
  * 注文履歴ページコンポーネント
@@ -141,8 +136,8 @@ export default function OrderHistory() {
                       </div>
                       <p className="text-xs text-gray-500 mt-1">注文日時: {new Date(order.createdAt).toLocaleString('ja-JP')}</p>
                     </div>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusLabels[order.status].className}`}>
-                      {statusLabels[order.status].text}
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusLabelInfo(order.status as OrderStatus).className}`}>
+                      {getStatusLabelInfo(order.status as OrderStatus).text}
                     </span>
                   </div>
                   
