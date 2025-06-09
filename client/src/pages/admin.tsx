@@ -26,6 +26,7 @@ import { AdminHeader } from "@/components/admin/admin-header";
 import { StoreSettingsCard } from "@/components/admin/store-settings-card";
 import { OrderFilters } from "@/components/admin/order-filters";
 import { getValidNextStatuses, isFinalStatus, getStatusLabel, isUndoTransition, getStatusLabelInfo, type OrderStatus } from "@/utils/orderStatus";
+import { handleError } from "@/lib/error-handler";
 
 type OrderItem = {
   id: string;
@@ -346,14 +347,8 @@ export default function Admin() {
       });
     },
     onError: (error: Error) => {
-      console.error("Order status update error:", error);
-      
-      // エラートーストを表示
-      toast({
-        title: "エラーが発生しました",
-        description: error.message || "ステータスの更新に失敗しました。もう一度お試しください。",
-        variant: "destructive",
-        duration: 5000,
+      handleError(error, {
+        defaultMessage: "ステータスの更新に失敗しました。もう一度お試しください。"
       });
     },
   });
@@ -494,8 +489,15 @@ export default function Admin() {
   }, [refetch]);
 
   const handleStoreSettingsToggle = useCallback(async (accepting: boolean) => {
-    await updateStoreSettings(accepting);
-    await refetchStoreSettings();
+    try {
+      await updateStoreSettings(accepting);
+      await refetchStoreSettings();
+    } catch (error) {
+      handleError(error, {
+        defaultMessage: "店舗設定の更新に失敗しました"
+      });
+      throw error; // 再スローして呼び出し元でもハンドリングできるようにする
+    }
   }, [updateStoreSettings, refetchStoreSettings]);
 
   return (

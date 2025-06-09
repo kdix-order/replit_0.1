@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { PauseCircle, PlayCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { StoreSetting } from "@shared/schema";
 
 interface StoreSettingsCardProps {
@@ -20,6 +21,7 @@ export function StoreSettingsCard({
   storeSettings,
   onToggle
 }: StoreSettingsCardProps) {
+  const { toast } = useToast();
   return (
     <Card className="border-2 border-gray-100 shadow-md overflow-hidden mb-6">
       <CardHeader className="bg-[#e80113] text-white py-4 px-6">
@@ -42,8 +44,21 @@ export function StoreSettingsCard({
                   onCheckedChange={async (checked: boolean) => {
                     try {
                       await onToggle(checked);
+                      toast({
+                        title: checked ? "注文受付を開始しました" : "注文受付を停止しました",
+                        description: checked 
+                          ? "お客様からの新規注文を受け付けられるようになりました。"
+                          : "新規注文の受付を一時的に停止しました。",
+                        duration: 3000,
+                      });
                     } catch (error) {
                       console.error("Store settings update error:", error);
+                      toast({
+                        title: "エラーが発生しました",
+                        description: "店舗設定の更新に失敗しました。もう一度お試しください。",
+                        variant: "destructive",
+                        duration: 5000,
+                      });
                     }
                   }}
                 />
@@ -58,7 +73,24 @@ export function StoreSettingsCard({
               <div className="flex mt-2">
                 <Button 
                   size="lg" 
-                  onClick={() => onToggle(true)}
+                  onClick={async () => {
+                    try {
+                      await onToggle(true);
+                      toast({
+                        title: "注文受付を開始しました",
+                        description: "お客様からの新規注文を受け付けられるようになりました。",
+                        duration: 3000,
+                      });
+                    } catch (error) {
+                      console.error("Error enabling order acceptance:", error);
+                      toast({
+                        title: "エラーが発生しました",
+                        description: "注文受付の開始に失敗しました。もう一度お試しください。",
+                        variant: "destructive",
+                        duration: 5000,
+                      });
+                    }
+                  }}
                   className="mr-3 bg-green-600 hover:bg-green-700 text-white px-6 py-3 text-base min-h-[48px]"
                   disabled={isAcceptingOrders}
                 >
@@ -67,7 +99,24 @@ export function StoreSettingsCard({
                 
                 <Button 
                   size="lg"
-                  onClick={() => onToggle(false)}
+                  onClick={async () => {
+                    try {
+                      await onToggle(false);
+                      toast({
+                        title: "注文受付を停止しました",
+                        description: "新規注文の受付を一時的に停止しました。",
+                        duration: 3000,
+                      });
+                    } catch (error) {
+                      console.error("Error disabling order acceptance:", error);
+                      toast({
+                        title: "エラーが発生しました",
+                        description: "注文受付の停止に失敗しました。もう一度お試しください。",
+                        variant: "destructive",
+                        duration: 5000,
+                      });
+                    }
+                  }}
                   className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 text-base min-h-[48px]"
                   disabled={!isAcceptingOrders}
                 >
