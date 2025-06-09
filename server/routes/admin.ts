@@ -6,6 +6,7 @@ import express, { type Request, type Response } from "express";
 import { isAdmin, isAuthenticated } from "../middlewares/auth";
 import { storage } from "../storage";
 import { isAdminUser } from "../utils/auth";
+import { isValidStatusTransition, getStatusTransitionError, type OrderStatus } from "../utils/orderStatus";
 
 const router = express.Router();
 
@@ -36,14 +37,26 @@ router.patch("/api/admin/orders/:id", isAuthenticated, isAdmin, async (req, res)
     const { status } = req.body;
 
     // Validate status value
-    if (!["new", "preparing", "completed"].includes(status)) {
-      return res.status(400).json({ message: "無効なステータスです。有効な値: 'new', 'preparing', 'completed'" });
+    if (!["pending", "paid", "ready", "completed", "cancelled", "refunded"].includes(status)) {
+      return res.status(400).json({ message: "無効なステータスです。有効な値: 'pending', 'paid', 'ready', 'completed', 'cancelled', 'refunded'" });
     }
 
     // Check if order exists first
     const existingOrder = await storage.getOrder(id);
     if (!existingOrder) {
       return res.status(404).json({ message: `注文ID: ${id} は見つかりませんでした` });
+    }
+
+    // Validate status transition
+    const currentStatus = existingOrder.status as OrderStatus;
+    const newStatus = status as OrderStatus;
+    
+    if (!isValidStatusTransition(currentStatus, newStatus)) {
+      return res.status(400).json({ 
+        message: getStatusTransitionError(currentStatus, newStatus),
+        currentStatus,
+        requestedStatus: newStatus
+      });
     }
 
     // Update the order status
