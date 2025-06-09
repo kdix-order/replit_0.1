@@ -166,3 +166,25 @@ export const insertStoreSettingsSchema = createInsertSchema(storeSettings).pick(
 
 export type StoreSetting = typeof storeSettings.$inferSelect;
 export type InsertStoreSetting = z.infer<typeof insertStoreSettingsSchema>;
+
+// Order status history model
+export const orderStatusHistory = pgTable("order_status_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status").notNull(),
+  changedBy: uuid("changed_by").notNull().references(() => users.id),
+  changedAt: timestamp("changed_at").defaultNow(),
+  reason: text("reason"),
+});
+
+export const insertOrderStatusHistorySchema = createInsertSchema(orderStatusHistory).pick({
+  orderId: true,
+  fromStatus: true,
+  toStatus: true,
+  changedBy: true,
+  reason: true,
+});
+
+export type OrderStatusHistory = typeof orderStatusHistory.$inferSelect;
+export type InsertOrderStatusHistory = z.infer<typeof insertOrderStatusHistorySchema>;

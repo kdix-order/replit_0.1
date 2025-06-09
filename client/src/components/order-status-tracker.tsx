@@ -1,7 +1,7 @@
 /**
  * 注文ステータストラッカーコンポーネント
  * 注文の進行状況を視覚的に表示するプログレスバーとステップインジケーターを提供します
- * 「新規注文」「調理中」「完了」の3段階でステータスを表示します
+ * 「支払い待ち」「支払い済み」「受取可能」「完了」の4段階でステータスを表示します
  */
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion"; // アニメーション効果のためのライブラリ
@@ -11,7 +11,7 @@ import { getStatusLabel, type OrderStatus } from "@/utils/orderStatus";
 /**
  * OrderStatusTrackerのプロパティ型定義
  * 
- * @property status - 現在の注文ステータス（"new":新規注文, "preparing":調理中, "completed":完了）
+ * @property status - 現在の注文ステータス（"pending":支払い待ち, "paid":支払い済み, "ready":受取可能, "completed":完了, "cancelled":キャンセル, "refunded":返金済み）
  */
 type OrderStatusTrackerProps = {
   status: OrderStatus;
@@ -21,7 +21,7 @@ type OrderStatusTrackerProps = {
  * 注文ステータストラッカーコンポーネント本体
  * 現在の注文ステータスに基づいて進捗バーとステップアイコンを表示します
  *
- * @param status - 現在の注文ステータス（"new","preparing","completed"）
+ * @param status - 現在の注文ステータス（"pending","paid","ready","completed","cancelled","refunded"）
  */
 export function OrderStatusTracker({ status }: OrderStatusTrackerProps) {
   /**
@@ -130,7 +130,7 @@ export function OrderStatusTracker({ status }: OrderStatusTrackerProps) {
         transition={{ duration: 0.8, ease: "easeInOut" }}
       />
 
-      {/* 3つのステップアイコン（新規注文、調理中、完了）を横並びに配置 */}
+      {/* 4つのステップアイコン（支払い待ち、支払い済み、受取可能、完了）を横並びに配置 */}
       <div className="flex justify-between items-center relative z-10">
         {/* Step 1: 支払い待ちアイコン */}
         <motion.div
@@ -158,7 +158,7 @@ export function OrderStatusTracker({ status }: OrderStatusTrackerProps) {
           </span>
         </motion.div>
 
-        {/* Step 2: 調理中アイコン */}
+        {/* Step 2: 支払い済みアイコン */}
         <motion.div
           className="flex flex-col items-center"
           variants={variants}

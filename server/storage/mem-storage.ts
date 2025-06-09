@@ -5,7 +5,7 @@ import type {
   InsertUser, Order, OrderWithTimeSlot,
   Product, StoreSetting, TimeSlot,
   TimeSlotWithAvailability,
-  User
+  User, OrderStatusHistory
 } from "@shared/schema";
 import { IStorage } from "./istorage";
 import { randomUUID } from "crypto";
@@ -364,13 +364,18 @@ export class MemStorage implements IStorage {
     return this.orders.get(id);
   }
 
-  async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
+  async updateOrderStatus(id: string, status: string, changedBy: string, reason?: string): Promise<Order | undefined> {
     const order = this.orders.get(id);
     if (!order) return undefined;
     
     const updatedOrder = { ...order, status };
     this.orders.set(id, updatedOrder);
     return updatedOrder;
+  }
+
+  async getOrderStatusHistory(orderId: string): Promise<OrderStatusHistory[]> {
+    // メモリストレージでは履歴を保存しないため、空の配列を返す
+    return [];
   }
 
   /**

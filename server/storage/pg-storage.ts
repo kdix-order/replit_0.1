@@ -19,6 +19,8 @@ import {
   products,
   storeSettings,
   timeSlots,
+  orderStatusHistory,
+  OrderStatusHistory,
 } from "@shared/schema";
 import { IStorage } from "./istorage";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -178,13 +180,45 @@ export class PgStorage implements IStorage {
     return updated;
   }
 
-  async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
-    const [updated] = await this.db
-      .update(orders)
-      .set({ status })
-      .where(eq(orders.id, id))
-      .returning();
-    return updated;
+  async updateOrderStatus(id: string, status: string, changedBy: string, reason?: string): Promise<Order | undefined> {
+    // トランザクション内で処理
+    return await this.db.transaction(async (tx) => {
+      // 現在の注文情報を取得
+      const [currentOrder] = await tx
+        .select()
+        .from(orders)
+        .where(eq(orders.id, id));
+      
+      if (!currentOrder) {
+        return undefined;
+      }
+
+      // ステータスを更新
+      const [updated] = await tx
+        .update(orders)
+        .set({ status })
+        .where(eq(orders.id, id))
+        .returning();
+
+      // ステータス履歴を記録
+      await tx.insert(orderStatusHistory).values({
+        orderId: id,
+        fromStatus: currentOrder.status,
+        toStatus: status,
+        changedBy: changedBy,
+        reason: reason,
+      });
+
+      return updated;
+    });
+  }
+
+  async getOrderStatusHistory(orderId: string): Promise<OrderStatusHistory[]> {
+    return await this.db
+      .select()
+      .from(orderStatusHistory)
+      .where(eq(orderStatusHistory.orderId, orderId))
+      .orderBy(orderStatusHistory.changedAt);
   }
 
   async updateStoreSettings(acceptingOrders: boolean): Promise<StoreSetting> {
