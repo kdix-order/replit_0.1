@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useStoreSettings, useUpdateStoreSettings } from "@/hooks/use-store-settings";
 import { Switch } from "@/components/ui/switch";
 import { OrderStatusTracker } from "@/components/order-status-tracker";
@@ -63,7 +63,13 @@ const statusIcons: Record<OrderStatus, JSX.Element | null> = {
  * 注文アイテムコンポーネント
  * 各注文の表示と詳細の展開/折りたたみ機能を提供します
  */
-function OrderItem({ 
+const OrderItem = memo<{
+  order: Order;
+  handleStatusChange: (orderId: string, status: string) => void;
+  updateOrderStatusMutation: any;
+  setDetailOrder: (order: Order | null) => void;
+  getCustomizationLabel: (customization: string) => string;
+}>(function OrderItem({ 
   order, 
   handleStatusChange, 
   updateOrderStatusMutation, 
@@ -252,7 +258,12 @@ function OrderItem({
       )}
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // カスタム比較関数でレンダリングを最適化
+  return prevProps.order.id === nextProps.order.id &&
+         prevProps.order.status === nextProps.order.status &&
+         prevProps.updateOrderStatusMutation.isPending === nextProps.updateOrderStatusMutation.isPending;
+});
 
 
 /**
@@ -347,8 +358,8 @@ export default function Admin() {
     },
   });
 
-  // Handler for status change
-  const handleStatusChange = (orderId: string, newStatus: string) => {
+  // Handler for status change - useCallbackでメモ化
+  const handleStatusChange = useCallback((orderId: string, newStatus: string) => {
     const order = orders?.find(o => o.id === orderId);
     if (!order) return;
     
@@ -363,7 +374,7 @@ export default function Admin() {
       return;
     }
     updateOrderStatusMutation.mutate({ id: orderId, status: newStatus });
-  };
+  }, [orders, updateOrderStatusMutation]);
 
   // Filter and sort orders
   const filteredOrders = useMemo(() => {
