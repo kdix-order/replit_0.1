@@ -2,18 +2,17 @@
  * 管理者ページ
  * 注文の管理、ステータスの更新、および店舗設定を制御する管理画面を提供します
  */
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, type UseMutationResult } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getCustomizationLabel } from "@/lib/utils";
 import { BowlSteamSpinner } from "@/components/ui/food-spinner";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Filter, Clock, AlertCircle, PauseCircle, PlayCircle, Calendar, Search, CheckSquare, Square, Bell } from "lucide-react";
+import { RefreshCw, Filter, Clock, AlertCircle, PauseCircle, PlayCircle, Calendar, Search, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,8 +22,7 @@ import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useStoreSettings, useUpdateStoreSettings } from "@/hooks/use-store-settings";
 import { Switch } from "@/components/ui/switch";
 import { OrderStatusTracker } from "@/components/order-status-tracker";
-import { getValidNextStatuses, isFinalStatus, getStatusLabel, getStatusBgClass, isUndoTransition, getStatusLabelInfo, type OrderStatus } from "@/utils/orderStatus";
-import { OrderStatsCard } from "@/components/admin/order-stats-card";
+import { getValidNextStatuses, isFinalStatus, getStatusLabel, isUndoTransition, getStatusLabelInfo, type OrderStatus } from "@/utils/orderStatus";
 
 type OrderItem = {
   id: string;
@@ -66,7 +64,7 @@ const statusIcons: Record<OrderStatus, JSX.Element | null> = {
 const OrderItem = memo<{
   order: Order;
   handleStatusChange: (orderId: string, status: string) => void;
-  updateOrderStatusMutation: any;
+  updateOrderStatusMutation: UseMutationResult<any, Error, { id: string; status: string }, unknown>;
   setDetailOrder: (order: Order | null) => void;
   getCustomizationLabel: (customization: string) => string;
 }>(function OrderItem({ 
@@ -78,7 +76,7 @@ const OrderItem = memo<{
 }: { 
   order: Order; 
   handleStatusChange: (orderId: string, status: string) => void;
-  updateOrderStatusMutation: any;
+  updateOrderStatusMutation: UseMutationResult<any, Error, { id: string; status: string }, unknown>;
   setDetailOrder: (order: Order | null) => void;
   getCustomizationLabel: (customization: string) => string;
 }) {
@@ -86,7 +84,7 @@ const OrderItem = memo<{
   
   return (
     <div 
-      className={`hover:bg-gray-50 transition-colors ${order.status === 'new' ? 'bg-yellow-50' : order.status === 'preparing' ? 'bg-blue-50' : ''}`}
+      className="hover:bg-gray-50 transition-colors"
     >
       {/* 注文概要セクション（常に表示） */}
       <div 
@@ -223,7 +221,7 @@ const OrderItem = memo<{
             ) : (
               <Select
                 value={order.status}
-                onValueChange={(value) => handleStatusChange(order.id, value)}
+                onValueChange={(value: string) => handleStatusChange(order.id, value)}
                 disabled={updateOrderStatusMutation.isPending}
               >
                 <SelectTrigger className={`w-44 h-12 text-base 
@@ -237,7 +235,7 @@ const OrderItem = memo<{
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {getValidNextStatuses(order.status as OrderStatus).map(status => (
+                  {getValidNextStatuses(order.status as OrderStatus).map((status: OrderStatus) => (
                     <SelectItem key={status} value={status} className="flex items-center">
                       {status === 'paid' && <><Clock className="w-4 h-4 mr-1 inline" /> 支払い済み</>}
                       {status === 'ready' && <><BowlSteamSpinner size="xs" className="mr-1 inline" /> 受取可能</>}
@@ -280,7 +278,6 @@ export default function Admin() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [showOnlyUrgent, setShowOnlyUrgent] = useState(false);
   
   // 店舗設定の取得
@@ -329,7 +326,7 @@ export default function Admin() {
       const response = await apiRequest("PATCH", `/api/admin/orders/${id}`, { status });
       return response;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       // キャッシュを更新
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
       
@@ -345,7 +342,7 @@ export default function Admin() {
         duration: 5000, // 5秒間表示
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error("Order status update error:", error);
       
       // エラートーストを表示
@@ -422,7 +419,16 @@ export default function Admin() {
     if (!orders) return { pending: 0, paid: 0, ready: 0, completed: 0, cancelled: 0, refunded: 0, total: 0, urgent: 0 };
     
     const now = new Date().getTime();
-    return orders.reduce((acc: any, order: Order) => {
+    return orders.reduce((acc: {
+      pending: number;
+      paid: number;
+      ready: number;
+      completed: number;
+      cancelled: number;
+      refunded: number;
+      total: number;
+      urgent: number;
+    }, order: Order) => {
       if (acc[order.status] !== undefined) {
         acc[order.status]++;
       }
@@ -536,7 +542,7 @@ export default function Admin() {
                   <Switch 
                     id="accepting-orders"
                     checked={isAcceptingOrders}
-                    onCheckedChange={async (checked) => {
+                    onCheckedChange={async (checked: boolean) => {
                       try {
                         await updateStoreSettings(checked);
                         await refetchStoreSettings();
@@ -755,7 +761,7 @@ export default function Admin() {
       </Tabs>
       
       {/* 注文詳細ダイアログ */}
-      <Dialog open={!!detailOrder} onOpenChange={(open) => !open && setDetailOrder(null)}>
+      <Dialog open={!!detailOrder} onOpenChange={(open: boolean) => !open && setDetailOrder(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           {detailOrder && (
             <div>
@@ -805,7 +811,7 @@ export default function Admin() {
                     <CardContent className="p-4">
                       <RadioGroup
                         value={detailOrder.status}
-                        onValueChange={(value) => handleStatusChange(detailOrder.id, value)}
+                        onValueChange={(value: string) => handleStatusChange(detailOrder.id, value)}
                         className="space-y-3"
                       >
                         <div className={`flex items-center space-x-2 p-2 rounded ${detailOrder.status === 'pending' ? 'bg-gray-50 border border-gray-200' : ''}`}>
