@@ -27,6 +27,7 @@ import { StoreSettingsCard } from "@/components/admin/store-settings-card";
 import { OrderFilters } from "@/components/admin/order-filters";
 import { getValidNextStatuses, isFinalStatus, getStatusLabel, isUndoTransition, getStatusLabelInfo, type OrderStatus } from "@/utils/orderStatus";
 import { handleError } from "@/lib/error-handler";
+import { useDebounce } from "@/hooks/use-debounce";
 
 type OrderItem = {
   id: string;
@@ -282,6 +283,7 @@ export default function Admin() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300); // 300ms遅延
   const [showOnlyUrgent, setShowOnlyUrgent] = useState(false);
   
   // 店舗設定の取得
@@ -377,9 +379,9 @@ export default function Admin() {
     
     let result = [...orders];
     
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    // Apply search filter with debounced query
+    if (debouncedSearchQuery) {
+      const query = debouncedSearchQuery.toLowerCase();
       result = result.filter((order: Order) => 
         order.callNumber.toString().includes(query) ||
         order.id.toLowerCase().includes(query) ||
