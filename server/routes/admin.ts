@@ -7,6 +7,8 @@ import { isAdmin, isAuthenticated } from "../middlewares/auth";
 import { storage } from "../storage";
 import { isValidStatusTransition, getStatusTransitionError } from "../utils/orderStatus";
 import { ORDER_STATUSES, type OrderStatus } from "../../shared/schema";
+import { isAdminUser } from "../utils/auth";
+import { transformCallNumber } from "../utils/callNumber";
 
 const router = express.Router();
 
@@ -14,7 +16,12 @@ const router = express.Router();
 router.get("/api/admin/orders", isAuthenticated, isAdmin, async (_, res) => {
   try {
     const orders = await storage.getOrders();
-    res.json(orders);
+    // Transform callNumber for admin view
+    const transformedOrders = orders.map(order => ({
+      ...order,
+      callNumber: transformCallNumber(order.callNumber)
+    }));
+    res.json(transformedOrders);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
@@ -73,7 +80,12 @@ router.patch("/api/admin/orders/:id", isAuthenticated, isAdmin, async (req, res)
     console.log(`Order ${id} status updated to "${status}" successfully`);
 
     // Return the updated order with time slot information
-    res.json({ ...updatedOrder, timeSlot });
+    // Transform callNumber for admin view
+    res.json({ 
+      ...updatedOrder, 
+      callNumber: transformCallNumber(updatedOrder.callNumber),
+      timeSlot 
+    });
   } catch (error) {
     console.error("Order status update error:", error);
     res.status(500).json({
