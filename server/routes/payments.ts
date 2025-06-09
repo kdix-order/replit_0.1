@@ -6,6 +6,7 @@ import express from "express";
 import { isAuthenticated } from "../middlewares/auth";
 import { createPayment, getPaymentDetails } from "../paypay";
 import { storage } from "../storage";
+import { printOrderReceipt } from "../smaregi";
 
 const router = express.Router();
 
@@ -56,6 +57,15 @@ router.get("/api/payments/paypay/completed/:merchantPaymentId", async (req, res)
 
       // Clear cart
       await storage.clearCart(order.userId);
+
+      // スマレジプリンターに印刷を送信
+      try {
+        await printOrderReceipt(order);
+        console.log(`Receipt print job sent for order ${order.id}`);
+      } catch (printError) {
+        console.error('Failed to print receipt:', printError);
+        // 印刷エラーが発生しても処理を継続
+      }
 
       res.redirect(`/pickup/${order.id}`);
     } else {
