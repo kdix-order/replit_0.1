@@ -2,17 +2,16 @@
  * 管理者向けエンドポイント
  ***********************************/
 
-import express, { type Request, type Response } from "express";
+import express from "express";
 import { isAdmin, isAuthenticated } from "../middlewares/auth";
 import { storage } from "../storage";
-import { isAdminUser } from "../utils/auth";
 import { isValidStatusTransition, getStatusTransitionError } from "../utils/orderStatus";
 import { ORDER_STATUSES, type OrderStatus } from "../../shared/schema";
 
 const router = express.Router();
 
 // 全注文一覧（管理者用）
-router.get("/api/admin/orders", isAuthenticated, isAdmin, async (req, res) => {
+router.get("/api/admin/orders", isAuthenticated, isAdmin, async (_, res) => {
   try {
     const orders = await storage.getOrders();
     res.json(orders);
@@ -85,7 +84,7 @@ router.patch("/api/admin/orders/:id", isAuthenticated, isAdmin, async (req, res)
 });
 
 // 店舗設定の取得 (一般ユーザー向け - 権限チェックなし)
-router.get("/api/store-settings", async (req, res) => {
+router.get("/api/store-settings", async (_, res) => {
   try {
     const settings = await storage.getStoreSettings();
     res.json(settings);
@@ -95,7 +94,7 @@ router.get("/api/store-settings", async (req, res) => {
 });
 
 // 店舗設定の取得 (管理者用)
-router.get("/api/admin/store-settings", isAuthenticated, isAdmin, async (req, res) => {
+router.get("/api/admin/store-settings", isAuthenticated, isAdmin, async (_, res) => {
   try {
     const settings = await storage.getStoreSettings();
     res.json(settings);
