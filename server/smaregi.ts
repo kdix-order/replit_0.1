@@ -22,6 +22,9 @@ class SmaregiAPI {
   }
 
   private formatReceiptData(order: Order & { items?: any[] }): string {
+    console.log('=== レシートデータ生成開始 ===');
+    console.log('Order:', JSON.stringify(order, null, 2));
+    
     const lines: string[] = [];
     
     // 注文番号（大きく表示）
@@ -98,7 +101,12 @@ class SmaregiAPI {
     lines.push('');
     lines.push('--------------------------------');
     
-    return lines.join('\n');
+    const receiptText = lines.join('\n');
+    console.log('=== 生成されたレシートデータ ===');
+    console.log(receiptText);
+    console.log('================================');
+    
+    return receiptText;
   }
 
   async printReceipt(order: Order & { items?: any[] }): Promise<void> {
@@ -108,8 +116,19 @@ class SmaregiAPI {
         printData: this.formatReceiptData(order)
       };
 
+      const url = `${this.baseUrl}/${this.config.contractId}/stores/${this.config.storeId}/terminals/${this.config.terminalId}/prints`;
+      
+      console.log('=== スマレジAPI印刷リクエスト ===');
+      console.log('URL:', url);
+      console.log('Headers:', {
+        'Authorization': `Bearer ${this.config.accessToken.substring(0, 10)}...`,
+        'Content-Type': 'application/json'
+      });
+      console.log('Request Body:', JSON.stringify(printData, null, 2));
+      console.log('================================');
+
       const response = await axios.post(
-        `${this.baseUrl}/${this.config.contractId}/stores/${this.config.storeId}/terminals/${this.config.terminalId}/prints`,
+        url,
         printData,
         {
           headers: {
@@ -119,13 +138,28 @@ class SmaregiAPI {
         }
       );
 
-      console.log('Print job sent successfully:', response.data);
+      console.log('=== スマレジAPI印刷レスポンス ===');
+      console.log('Status:', response.status);
+      console.log('Response Data:', JSON.stringify(response.data, null, 2));
+      console.log('Print job sent successfully!');
+      console.log('================================');
     } catch (error) {
+      console.error('=== スマレジAPI印刷エラー ===');
       console.error('Failed to print receipt:', error);
       if (axios.isAxiosError(error)) {
-        console.error('Response data:', (error as any).response?.data);
-        console.error('Response status:', (error as any).response?.status);
+        console.error('Error Type: Axios Error');
+        console.error('Response Status:', (error as any).response?.status);
+        console.error('Response Data:', JSON.stringify((error as any).response?.data, null, 2));
+        console.error('Request Config:', {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers
+        });
+      } else {
+        console.error('Error Type:', typeof error);
+        console.error('Error Details:', error);
       }
+      console.error('==============================');
       throw error;
     }
   }
@@ -140,8 +174,22 @@ export function initializeSmaregiAPI(): SmaregiAPI | null {
   const storeId = process.env.SMAREGI_STORE_ID;
   const terminalId = process.env.SMAREGI_TERMINAL_ID;
 
+  // デバッグ: 環境変数の確認
+  console.log('=== スマレジ環境変数チェック ===');
+  console.log('SMAREGI_CONTRACT_ID:', contractId ? `設定済み (${contractId})` : '未設定');
+  console.log('SMAREGI_ACCESS_TOKEN:', accessToken ? `設定済み (${accessToken.substring(0, 10)}...)` : '未設定');
+  console.log('SMAREGI_STORE_ID:', storeId ? `設定済み (${storeId})` : '未設定');
+  console.log('SMAREGI_TERMINAL_ID:', terminalId ? `設定済み (${terminalId})` : '未設定');
+  console.log('================================');
+
   if (!contractId || !accessToken || !storeId || !terminalId) {
     console.warn('Smaregi API credentials not configured. Printing will be disabled.');
+    console.warn('Missing credentials:', {
+      contractId: !contractId,
+      accessToken: !accessToken,
+      storeId: !storeId,
+      terminalId: !terminalId
+    });
     return null;
   }
 
@@ -158,18 +206,27 @@ export function initializeSmaregiAPI(): SmaregiAPI | null {
 }
 
 export async function printOrderReceipt(order: Order & { items?: any[] }): Promise<void> {
+  console.log('\n=== printOrderReceipt 呼び出し ===');
+  console.log('Order ID:', order.id);
+  console.log('Call Number:', order.callNumber);
+  console.log('Status:', order.status);
+  console.log('Total:', order.total);
+  console.log('================================\n');
+  
   const api = initializeSmaregiAPI();
   
   if (!api) {
-    console.log('Smaregi API not configured. Skipping print.');
+    console.log('❌ Smaregi API not configured. Skipping print.');
     return;
   }
 
+  console.log('✅ Smaregi API initialized successfully');
+
   try {
     await api.printReceipt(order);
-    console.log(`Receipt printed for order ${order.id}`);
+    console.log(`✅ Receipt printed successfully for order ${order.id} (Call Number: ${order.callNumber})`);
   } catch (error) {
-    console.error(`Failed to print receipt for order ${order.id}:`, error);
+    console.error(`❌ Failed to print receipt for order ${order.id}:`, error);
     // エラーが発生しても処理を継続
   }
 }

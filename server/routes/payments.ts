@@ -59,13 +59,22 @@ router.get("/api/payments/paypay/completed/:merchantPaymentId", async (req, res)
       await storage.clearCart(order.userId);
 
       // スマレジプリンターに印刷を送信
+      console.log('\n🖨️ === 印刷処理開始 ===');
+      console.log('Order Details for Printing:');
+      console.log('- Order ID:', order.id);
+      console.log('- Call Number:', order.callNumber);
+      console.log('- Total:', order.total);
+      console.log('- Status:', order.status);
+      console.log('- Items:', JSON.stringify(order.items, null, 2));
+      
       try {
         await printOrderReceipt(order);
-        console.log(`Receipt print job sent for order ${order.id}`);
+        console.log(`✅ Receipt print job completed for order ${order.id}`);
       } catch (printError) {
-        console.error('Failed to print receipt:', printError);
+        console.error('❌ Failed to print receipt:', printError);
         // 印刷エラーが発生しても処理を継続
       }
+      console.log('🖨️ === 印刷処理終了 ===\n');
 
       res.redirect(`/pickup/${order.id}`);
     } else {
