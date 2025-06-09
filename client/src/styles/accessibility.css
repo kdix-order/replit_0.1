@@ -1,0 +1,199 @@
+/**
+ * アクセシビリティ向上のためのグローバルスタイル
+ */
+
+/* フォーカスインジケーターの統一 */
+:focus-visible {
+  outline: 2px solid #e80113;
+  outline-offset: 2px;
+}
+
+/* キーボードナビゲーション時のみフォーカスリングを表示 */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ハイコントラストモード対応 */
+@media (prefers-contrast: high) {
+  .border {
+    border-width: 2px;
+  }
+  
+  .text-gray-500 {
+    color: #4b5563;
+  }
+}
+
+/* モーション設定を尊重 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* スクリーンリーダー用のユーティリティクラス */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* タッチターゲットの最小サイズ確保 */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"],
+[role="link"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* モバイルでのテキストサイズ調整 */
+@media (max-width: 640px) {
+  body {
+    font-size: 16px;
+  }
+  
+  button,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* スキップリンク */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  z-index: 999;
+  padding: 1em;
+  background-color: #e80113;
+  color: white;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: 50%;
+  transform: translateX(-50%);
+  top: 0;
+}
+
+/* フォーカストラップ用のヘルパー */
+[data-focus-trap] {
+  position: relative;
+}
+
+/* ARIAライブリージョンのスタイル */
+[aria-live="polite"],
+[aria-live="assertive"] {
+  position: relative;
+}
+
+/* 読み上げ順序の改善 */
+.order-item-header {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 640px) {
+  .order-item-header {
+    flex-direction: row;
+  }
+}
+
+/* コントラスト比の改善 */
+.text-gray-400 {
+  color: #6b7280;
+}
+
+.text-gray-500 {
+  color: #6b7280;
+}
+
+/* インタラクティブ要素のホバー状態 */
+button:hover:not(:disabled),
+a:hover,
+[role="button"]:hover:not([aria-disabled="true"]) {
+  opacity: 0.9;
+}
+
+/* 無効状態のスタイル */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* エラー状態のアクセシビリティ */
+[aria-invalid="true"] {
+  border-color: #dc2626;
+}
+
+[aria-describedby]:focus {
+  outline-offset: 4px;
+}
+
+/* 選択可能なテキストの改善 */
+.user-select-all {
+  -webkit-user-select: all;
+  -moz-user-select: all;
+  user-select: all;
+}
+
+/* タブパネルのフォーカス管理 */
+[role="tabpanel"]:focus {
+  outline: none;
+}
+
+[role="tab"][aria-selected="true"] {
+  font-weight: bold;
+}
+
+/* モーダルダイアログのバックドロップ */
+[role="dialog"]::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* プログレスインジケーター */
+@keyframes progress-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+[role="progressbar"] {
+  animation: progress-pulse 2s ease-in-out infinite;
+}
+
+/* リストアイテムのフォーカス */
+[role="listitem"]:focus-within {
+  background-color: rgba(232, 1, 19, 0.05);
+}
+
+/* タッチデバイス用の調整 */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  a,
+  [role="button"] {
+    padding: 12px 16px;
+  }
+}
