@@ -2,9 +2,7 @@ import {
   CartItem,
   cartItems,
   CartItemWithProduct,
-  Feedback,
   InsertCartItem,
-  InsertFeedback,
   InsertOrder,
   InsertProduct,
   InsertTimeSlot,
@@ -16,12 +14,13 @@ import {
   TimeSlot,
   TimeSlotWithAvailability,
   User,
-  feedback as feedbacks,
   orders,
   users,
   products,
   storeSettings,
   timeSlots,
+  orderStatusHistory,
+  OrderStatusHistory,
 } from "@shared/schema";
 import { IStorage } from "./istorage";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -49,11 +48,6 @@ export class PgStorage implements IStorage {
     await this.db.delete(cartItems).where(eq(cartItems.userId, userId));
   }
 
-  async createFeedback(feedback: InsertFeedback): Promise<Feedback> {
-    const [result] = await this.db.insert(feedbacks).values(feedback).returning();
-    return result;
-  }
-
   async createOrder(order: InsertOrder): Promise<Order> {
     const [result] = await this.db.insert(orders).values(order).returning();
     return result;
@@ -66,10 +60,6 @@ export class PgStorage implements IStorage {
 
   async deleteCartItem(id: string): Promise<void> {
     await this.db.delete(cartItems).where(eq(cartItems.id, id));
-  }
-
-  async getAllFeedback(): Promise<Feedback[]> {
-    return await this.db.select().from(feedbacks);
   }
 
   async getCartItem(userId: string, productId: string): Promise<CartItem | undefined> {
@@ -94,22 +84,6 @@ export class PgStorage implements IStorage {
       ...row.cartItem,
       product: row.product!,
     }));
-  }
-
-  async getFeedbackByOrderId(orderId: string): Promise<Feedback | undefined> {
-    const rows = await this.db
-      .select()
-      .from(feedbacks)
-      .where(eq(feedbacks.orderId, orderId));
-    return rows[0];
-  }
-
-  async getFeedbackByUserId(userId: string): Promise<Feedback[]> {
-    const rows = await this.db
-      .select()
-      .from(feedbacks)
-      .where(eq(feedbacks.userId, userId));
-    return rows;
   }
 
   async getOrder(id: string): Promise<Order | undefined> {
@@ -206,13 +180,45 @@ export class PgStorage implements IStorage {
     return updated;
   }
 
-  async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
-    const [updated] = await this.db
-      .update(orders)
-      .set({ status })
-      .where(eq(orders.id, id))
-      .returning();
-    return updated;
+  async updateOrderStatus(id: string, status: string, changedBy: string, reason?: string): Promise<Order | undefined> {
+    // トランザクション内で処理
+    return await this.db.transaction(async (tx) => {
+      // 現在の注文情報を取得
+      const [currentOrder] = await tx
+        .select()
+        .from(orders)
+        .where(eq(orders.id, id));
+      
+      if (!currentOrder) {
+        return undefined;
+      }
+
+      // ステータスを更新
+      const [updated] = await tx
+        .update(orders)
+        .set({ status })
+        .where(eq(orders.id, id))
+        .returning();
+
+      // ステータス履歴を記録
+      await tx.insert(orderStatusHistory).values({
+        orderId: id,
+        fromStatus: currentOrder.status,
+        toStatus: status,
+        changedBy: changedBy,
+        reason: reason,
+      });
+
+      return updated;
+    });
+  }
+
+  async getOrderStatusHistory(orderId: string): Promise<OrderStatusHistory[]> {
+    return await this.db
+      .select()
+      .from(orderStatusHistory)
+      .where(eq(orderStatusHistory.orderId, orderId))
+      .orderBy(orderStatusHistory.changedAt);
   }
 
   async updateStoreSettings(acceptingOrders: boolean): Promise<StoreSetting> {

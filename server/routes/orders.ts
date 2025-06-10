@@ -49,7 +49,7 @@ router.post("/api/orders", isAuthenticated, async (req, res) => {
     // Create order
     const order = await storage.createOrder({
       userId: req.user.id,
-      status: "new",
+      status: "pending",
       total,
       timeSlotId,
       items: cartItems.map(item => ({

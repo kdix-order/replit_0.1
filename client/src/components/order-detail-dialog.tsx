@@ -47,7 +47,7 @@ type OrderItem = {
  * @property id - 注文ID
  * @property userId - ユーザーID
  * @property callNumber - 呼出番号（201-300の範囲）
- * @property status - 注文ステータス（new:新規, preparing:調理中, completed:完了）
+ * @property status - 注文ステータス（pending:支払い待ち, paid:支払い済み, ready:受取可能, completed:完了, cancelled:キャンセル, refunded:返金）
  * @property total - 合計金額
  * @property timeSlot - 受取時間枠情報
  * @property createdAt - 注文作成日時
@@ -57,7 +57,7 @@ type Order = {
   id: string;
   userId: number;
   callNumber: number;
-  status: "new" | "preparing" | "completed";
+  status: "pending" | "paid" | "ready" | "completed" | "cancelled" | "refunded";
   total: number;
   timeSlot: {
     id: string;
@@ -95,11 +95,11 @@ export function OrderDetailDialog({ isOpen, onClose, order }: OrderDetailDialogP
   const [, setLocation] = useLocation();
 
   /**
-   * 注文ステータスが「完了」に変わった時にコンフェティアニメーションを表示する効果
-   * 完了ステータスになると3秒間だけアニメーションを表示します
+   * 注文ステータスが「受取可能」に変わった時にコンフェティアニメーションを表示する効果
+   * 受取可能ステータスになると3秒間だけアニメーションを表示します
    */
   useEffect(() => {
-    if (order?.status === "completed") {
+    if (order?.status === "ready") {
       setShowConfetti(true);
       // 3秒後にアニメーションを終了
       const timer = setTimeout(() => {
@@ -114,28 +114,46 @@ export function OrderDetailDialog({ isOpen, onClose, order }: OrderDetailDialogP
    * 注文ステータスに対応するアイコン、メッセージ、背景色を返す関数
    * 各ステータスごとに適切な視覚的フィードバックを提供します
    * 
-   * @param status - 注文ステータス（new, preparing, completed）
+   * @param status - 注文ステータス
    * @returns アイコン、メッセージテキスト、CSS色クラスを含むオブジェクト
    */
-  const getStatusIndicator = (status: "new" | "preparing" | "completed") => {
+  const getStatusIndicator = (status: "pending" | "paid" | "ready" | "completed" | "cancelled" | "refunded") => {
     switch(status) {
-      case "new":
+      case "pending":
         return {
-          icon: <AlertCircle className="w-6 h-6 text-[#fee10b]" />,
-          message: "新規注文を受け付けました",
+          icon: <AlertCircle className="w-6 h-6 text-gray-500" />,
+          message: "お支払いをお待ちしています",
+          color: "bg-gray-100 text-gray-800"
+        };
+      case "paid":
+        return {
+          icon: <ChefHat className="w-6 h-6 text-[#fee10b]" />,
+          message: "ご注文を承りました",
           color: "bg-[#fee10b]/10 text-[#e80113]"
         };
-      case "preparing":
+      case "ready":
         return {
-          icon: <ChefHat className="w-6 h-6 text-[#e80113]" />,
-          message: "現在調理中です",
-          color: "bg-[#e80113]/10 text-[#e80113]"
+          icon: <ClipboardCheck className="w-6 h-6 text-green-600" />,
+          message: "お受け取りいただけます",
+          color: "bg-green-100 text-green-800"
         };
       case "completed":
         return {
           icon: <ClipboardCheck className="w-6 h-6 text-green-600" />,
-          message: "お料理が完成しました",
+          message: "ご利用ありがとうございました",
           color: "bg-green-100 text-green-800"
+        };
+      case "cancelled":
+        return {
+          icon: <AlertCircle className="w-6 h-6 text-red-600" />,
+          message: "キャンセルされました",
+          color: "bg-red-100 text-red-800"
+        };
+      case "refunded":
+        return {
+          icon: <AlertCircle className="w-6 h-6 text-red-600" />,
+          message: "返金処理が完了しました",
+          color: "bg-red-100 text-red-800"
         };
       default:
         return {
@@ -253,7 +271,7 @@ export function OrderDetailDialog({ isOpen, onClose, order }: OrderDetailDialogP
           </div>
         </div>
 
-        {/* 注文完了時のコンフェティアニメーション（お祝い効果） */}
+        {/* 受取可能時のコンフェティアニメーション（お祝い効果） */}
         {showConfetti && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             {/* 複数のコンフェティ粒子をランダムに生成 */}

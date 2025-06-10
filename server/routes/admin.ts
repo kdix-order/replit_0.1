@@ -2,16 +2,18 @@
  * 管理者向けエンドポイント
  ***********************************/
 
-import express, { type Request, type Response } from "express";
+import express from "express";
 import { isAdmin, isAuthenticated } from "../middlewares/auth";
 import { storage } from "../storage";
+import { isValidStatusTransition, getStatusTransitionError } from "../utils/orderStatus";
+import { ORDER_STATUSES, type OrderStatus } from "../../shared/schema";
 import { isAdminUser } from "../utils/auth";
 import { transformCallNumber } from "../utils/callNumber";
 
 const router = express.Router();
 
 // 全注文一覧（管理者用）
-router.get("/api/admin/orders", isAuthenticated, isAdmin, async (req, res) => {
+router.get("/api/admin/orders", isAuthenticated, isAdmin, async (_, res) => {
   try {
     const orders = await storage.getOrders();
     // Transform callNumber for admin view
@@ -42,8 +44,8 @@ router.patch("/api/admin/orders/:id", isAuthenticated, isAdmin, async (req, res)
     const { status } = req.body;
 
     // Validate status value
-    if (!["new", "preparing", "completed"].includes(status)) {
-      return res.status(400).json({ message: "無効なステータスです。有効な値: 'new', 'preparing', 'completed'" });
+    if (!ORDER_STATUSES.includes(status)) {
+      return res.status(400).json({ message: `無効なステータスです。有効な値: ${ORDER_STATUSES.join(", ")}` });
     }
 
     // Check if order exists first
@@ -52,8 +54,20 @@ router.patch("/api/admin/orders/:id", isAuthenticated, isAdmin, async (req, res)
       return res.status(404).json({ message: `注文ID: ${id} は見つかりませんでした` });
     }
 
-    // Update the order status
-    const updatedOrder = await storage.updateOrderStatus(id, status);
+    // Validate status transition
+    const currentStatus = existingOrder.status as OrderStatus;
+    const newStatus = status as OrderStatus;
+    
+    if (!isValidStatusTransition(currentStatus, newStatus)) {
+      return res.status(400).json({ 
+        message: getStatusTransitionError(currentStatus, newStatus),
+        currentStatus,
+        requestedStatus: newStatus
+      });
+    }
+
+    // Update the order status with history
+    const updatedOrder = await storage.updateOrderStatus(id, status, req.user!.id);
 
     if (!updatedOrder) {
       return res.status(500).json({ message: "ステータス更新に失敗しました" });
@@ -82,7 +96,7 @@ router.patch("/api/admin/orders/:id", isAuthenticated, isAdmin, async (req, res)
 });
 
 // 店舗設定の取得 (一般ユーザー向け - 権限チェックなし)
-router.get("/api/store-settings", async (req, res) => {
+router.get("/api/store-settings", async (_, res) => {
   try {
     const settings = await storage.getStoreSettings();
     res.json(settings);
@@ -92,7 +106,7 @@ router.get("/api/store-settings", async (req, res) => {
 });
 
 // 店舗設定の取得 (管理者用)
-router.get("/api/admin/store-settings", isAuthenticated, isAdmin, async (req, res) => {
+router.get("/api/admin/store-settings", isAuthenticated, isAdmin, async (_, res) => {
   try {
     const settings = await storage.getStoreSettings();
     res.json(settings);
@@ -129,54 +143,5 @@ router.patch("/api/admin/store-settings", isAuthenticated, isAdmin, async (req, 
   }
 });
 
-// 管理者向け - すべてのフィードバックを取得
-router.get('/api/admin/feedback', isAuthenticated, async (req: Request, res: Response) => {
-  try {
-    // 管理者権限チェック
-    if (!await isAdminUser(req)) {
-      return res.status(403).json({ message: "Forbidden - Admin permissions required" });
-    }
-
-    // すべてのフィードバックを取得
-    const allFeedback = await storage.getAllFeedback();
-
-    // 注文情報とユーザー情報を付加
-    const enrichedFeedback = await Promise.all(
-      allFeedback.map(async (feedback) => {
-        let orderDetails = null;
-        let userName = 'Unknown user';
-
-        if (feedback.orderId) {
-          const order = await storage.getOrder(feedback.orderId);
-          if (order) {
-            orderDetails = {
-              id: order.id,
-              callNumber: order.callNumber,
-              status: order.status,
-              total: order.total,
-              createdAt: order.createdAt
-            };
-          }
-        }
-
-        const user = await storage.getUser(feedback.userId);
-        if (user) {
-          userName = user.username || user.email;
-        }
-
-        return {
-          ...feedback,
-          orderDetails,
-          userName
-        };
-      })
-    );
-
-    res.json(enrichedFeedback);
-  } catch (error) {
-    console.error('Error fetching feedback:', error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
 
 export default router;

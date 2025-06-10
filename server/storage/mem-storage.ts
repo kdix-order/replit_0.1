@@ -1,11 +1,11 @@
 import type {
   CartItem,
-  CartItemWithProduct, Feedback,
-  InsertCartItem, InsertFeedback, InsertOrder, InsertProduct, InsertTimeSlot,
+  CartItemWithProduct,
+  InsertCartItem, InsertOrder, InsertProduct, InsertTimeSlot,
   InsertUser, Order, OrderWithTimeSlot,
   Product, StoreSetting, TimeSlot,
   TimeSlotWithAvailability,
-  User
+  User, OrderStatusHistory
 } from "@shared/schema";
 import { IStorage } from "./istorage";
 import { randomUUID } from "crypto";
@@ -16,11 +16,9 @@ export class MemStorage implements IStorage {
   private cartItems: Map<string, CartItem>;
   private timeSlots: Map<string, TimeSlot>;
   private orders: Map<string, Order>;
-  private feedbacks: Map<string, Feedback>;
   private storeSettings!: StoreSetting;
 
   private callNumberCounter: number;
-  private feedbackIdCounter: number;
 
   constructor() {
     this.users = new Map();
@@ -28,7 +26,6 @@ export class MemStorage implements IStorage {
     this.cartItems = new Map();
     this.timeSlots = new Map();
     this.orders = new Map();
-    this.feedbacks = new Map();
 
     // 呼出番号カウンターの初期化 - 201から始まる三桁の番号システム
     // マクドナルドのような呼出番号システム（201〜300で循環）
@@ -36,7 +33,6 @@ export class MemStorage implements IStorage {
     // リセット条件を合わせて変更してください
     this.callNumberCounter = 201; // 呼出番号の開始値（201）
     
-    this.feedbackIdCounter = 1;
     
     // 店舗設定の初期化
     this.storeSettings = {
@@ -368,13 +364,18 @@ export class MemStorage implements IStorage {
     return this.orders.get(id);
   }
 
-  async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
+  async updateOrderStatus(id: string, status: string, changedBy: string, reason?: string): Promise<Order | undefined> {
     const order = this.orders.get(id);
     if (!order) return undefined;
     
     const updatedOrder = { ...order, status };
     this.orders.set(id, updatedOrder);
     return updatedOrder;
+  }
+
+  async getOrderStatusHistory(orderId: string): Promise<OrderStatusHistory[]> {
+    // メモリストレージでは履歴を保存しないため、空の配列を返す
+    return [];
   }
 
   /**
@@ -399,37 +400,6 @@ export class MemStorage implements IStorage {
     return this.callNumberCounter++;
   }
 
-  // Feedback methods
-  async createFeedback(insertFeedback: InsertFeedback): Promise<Feedback> {
-    const id = randomUUID();
-    const feedback = {
-      ...insertFeedback,
-      id,
-      createdAt: new Date(),
-      userId: insertFeedback.userId ?? 0,
-      sentiment: insertFeedback.sentiment as "positive" | "negative",
-      orderId: insertFeedback.orderId ?? null,
-      rating: insertFeedback.rating ?? null,
-      comment: insertFeedback.comment ?? null
-    };
-    this.feedbacks.set(id, feedback);
-    return feedback;
-  }
-
-  async getFeedbackByOrderId(orderId: string): Promise<Feedback | undefined> {
-    return Array.from(this.feedbacks.values())
-      .find(feedback => feedback.orderId === orderId);
-  }
-
-  async getFeedbackByUserId(userId: string): Promise<Feedback[]> {
-    return Array.from(this.feedbacks.values())
-      .filter(feedback => feedback.userId === userId);
-  }
-  
-  async getAllFeedback(): Promise<Feedback[]> {
-    return Array.from(this.feedbacks.values())
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
 }
 
 export const storage = new MemStorage();

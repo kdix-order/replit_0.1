@@ -67,12 +67,7 @@ export function usePayPay() {
 
       const response = await apiRequest('GET', `/api/payments/paypay/status/${merchantPaymentId}`);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || '支払い状態確認中にエラーが発生しました');
-      }
-
-      return response.json() as Promise<PayPayStatusResponse>;
+      return response as PayPayStatusResponse;
     },
     enabled: !!merchantPaymentId,
     refetchInterval: (data) => {

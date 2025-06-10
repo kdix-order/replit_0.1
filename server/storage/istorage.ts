@@ -1,11 +1,11 @@
 import type {
     CartItem,
-    CartItemWithProduct, Feedback,
-    InsertCartItem, InsertFeedback, InsertOrder,
+    CartItemWithProduct,
+    InsertCartItem, InsertOrder,
     InsertUser, Order, OrderWithTimeSlot,
     Product, StoreSetting, TimeSlot,
     TimeSlotWithAvailability,
-    User
+    User, OrderStatusHistory
 } from "@shared/schema";
 
 export interface IStorage {
@@ -37,13 +37,9 @@ export interface IStorage {
     getOrders(): Promise<OrderWithTimeSlot[]>;
     getOrdersByUser(userId: string): Promise<OrderWithTimeSlot[]>;
     getOrder(id: string): Promise<Order | undefined>;
-    updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
+    updateOrderStatus(id: string, status: string, changedBy: string, reason?: string): Promise<Order | undefined>;
+    getOrderStatusHistory(orderId: string): Promise<OrderStatusHistory[]>;
 
-    // Feedback methods
-    createFeedback(feedback: InsertFeedback): Promise<Feedback>;
-    getFeedbackByOrderId(orderId: string): Promise<Feedback | undefined>;
-    getFeedbackByUserId(userId: string): Promise<Feedback[]>;
-    getAllFeedback(): Promise<Feedback[]>;
 
     // Store settings methods
     getStoreSettings(): Promise<StoreSetting>;

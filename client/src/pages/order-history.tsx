@@ -1,7 +1,7 @@
 /**
  * 注文履歴ページ
  * ユーザーの過去の注文を一覧表示し、各注文の詳細や状態を確認できる機能を提供します
- * 注文のステータス表示、フィードバック送信、QRコード表示への遷移機能も含まれています
+ * 注文のステータス表示、QRコード表示への遷移機能も含まれています
  */
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -10,11 +10,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { AnimatedButton } from "@/components/ui/animated-button";
-import { Clock, ChevronRight, Receipt, MessageSquare, Eye, Ticket } from "lucide-react";
+import { Clock, ChevronRight, Receipt, Eye, Ticket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { FeedbackDialog } from "@/components/feedback-dialog";
 import { OrderDetailDialog } from "@/components/order-detail-dialog";
+import { getStatusLabelInfo, type OrderStatus } from "@/utils/orderStatus";
 
 type OrderItem = {
   id: string;
@@ -29,7 +29,7 @@ type Order = {
   id: string;
   userId: number;
   callNumber: number;
-  status: "new" | "preparing" | "completed";
+  status: "pending" | "paid" | "ready" | "completed" | "cancelled" | "refunded";
   total: number;
   timeSlot: {
     id: string;
@@ -39,23 +39,15 @@ type Order = {
   items: OrderItem[];
 };
 
-const statusLabels = {
-  new: { text: "受付済み", className: "bg-yellow-100 text-yellow-800" },
-  paid: { text: "支払い済み", className: "bg-yellow-100 text-yellow-800" },
-  preparing: { text: "準備中", className: "bg-blue-100 text-blue-800" },
-  completed: { text: "完了", className: "bg-green-100 text-green-800" }
-};
 
 /**
  * 注文履歴ページコンポーネント
- * ユーザーの注文履歴を一覧表示し、各注文の詳細確認や評価機能を提供します
+ * ユーザーの注文履歴を一覧表示し、各注文の詳細確認機能を提供します
  * 注文ステータスのカラーコーディングやQRコードへの遷移機能も実装しています
  */
 export default function OrderHistory() {
   const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
-  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState<string | undefined>(undefined);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
@@ -144,8 +136,8 @@ export default function OrderHistory() {
                       </div>
                       <p className="text-xs text-gray-500 mt-1">注文日時: {new Date(order.createdAt).toLocaleString('ja-JP')}</p>
                     </div>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusLabels[order.status].className}`}>
-                      {statusLabels[order.status].text}
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusLabelInfo(order.status as OrderStatus).className}`}>
+                      {getStatusLabelInfo(order.status as OrderStatus).text}
                     </span>
                   </div>
                   
@@ -183,21 +175,6 @@ export default function OrderHistory() {
                     <div className="flex items-center">
                       <AnimatedButton
                         onClick={(e) => {
-                          e.stopPropagation(); // カード全体のクリックイベントの伝播を止める
-                          setSelectedOrderId(order.id);
-                          setFeedbackDialogOpen(true);
-                        }}
-                        className="mr-2 px-2 py-1 bg-[#fee10b] hover:bg-yellow-400 text-black rounded-md"
-                        animationType="scale"
-                        size="sm"
-                        intensity="medium"
-                      >
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        <span className="text-xs">評価</span>
-                      </AnimatedButton>
-                      
-                      <AnimatedButton
-                        onClick={(e) => {
                           e.stopPropagation();
                           setLocation(`/pickup/${order.id}`);
                         }}
@@ -229,11 +206,6 @@ export default function OrderHistory() {
           </div>
         </div>
       )}
-      <FeedbackDialog 
-        isOpen={feedbackDialogOpen}
-        onClose={() => setFeedbackDialogOpen(false)}
-        orderId={selectedOrderId}
-      />
       <OrderDetailDialog
         isOpen={detailDialogOpen}
         onClose={() => setDetailDialogOpen(false)}
