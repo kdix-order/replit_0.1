@@ -7,6 +7,7 @@
 
 import { Router } from "express";
 import orderRoutes from "./orderRoutes";
+import paymentRoutes from "./paymentRoutes";
 import productRoutes from "./productRoutes";
 import cartRoutes from "./cartRoutes";
 import authRoutes from "./authRoutes";
@@ -19,7 +20,7 @@ router.use("/admin", adminRoutes);
 router.use("/auth", authRoutes);
 router.use("/cart", cartRoutes);
 router.use("/orders", orderRoutes);
-// router.use("/payments", paymentsRoutes);
+router.use("/payments", paymentRoutes);
 router.use("/products", productRoutes);
 router.use("/receipts", receiptRoutes);
 
