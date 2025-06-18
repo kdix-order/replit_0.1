@@ -8,6 +8,7 @@
 import { createPayment, getPaymentDetails } from "../paypay";
 import { storage } from "@/storage";
 import { Order } from "../../../shared/schema";
+import { smaregiService } from "./smaregiService";
 
 /**
  * 決済サービスクラス
@@ -62,10 +63,50 @@ export class PaymentService {
     // Clear cart
     await storage.clearCart(order.userId);
 
+    // レシートを印刷
+    try {
+      await this.printReceipt(order);
+    } catch (error) {
+      console.error('Receipt printing failed:', error);
+      // レシート印刷の失敗は致命的エラーではないため、処理を続行
+    }
+
     return {
       order,
       redirectUrl: `/pickup/${order.id}`
     };
+  }
+
+  /**
+   * Smaregi APIを使用してレシートを印刷します
+   * OAuth2.0フローでアクセストークンを動的に取得し、レート制限対策としてキャッシュを活用します
+   * @param order 注文データ
+   * @throws レシート印刷に失敗した場合
+   */
+  private async printReceipt(order: Order): Promise<void> {
+    const contractId = process.env.SMAREGI_CONTRACT_ID;
+    const storeId = process.env.SMAREGI_STORE_ID;
+    const terminalId = process.env.SMAREGI_TERMINAL_ID;
+    const serverUrl = process.env.SERVER_URL || 'http://localhost:3000';
+
+    if (!contractId || !storeId || !terminalId) {
+      console.warn('Smaregi credentials not configured, skipping receipt printing');
+      return;
+    }
+
+    try {
+      // レシート画像のURLを構築（既存のレシート生成エンドポイントを使用）
+      const receiptImageUrl = `${serverUrl}/api/receipts/${order.id}`;
+
+      // SmaregiServiceを使用してレシートを印刷（アクセストークンは自動的に取得・キャッシュされる）
+      await smaregiService.printReceipt(contractId, storeId, terminalId, receiptImageUrl);
+
+      console.log(`Receipt print request sent successfully for order #${order.callNumber}`);
+      console.log(`Receipt image URL: ${receiptImageUrl}`);
+    } catch (error) {
+      console.error('Failed to print receipt via Smaregi API:', error);
+      throw error;
+    }
   }
 }
 
