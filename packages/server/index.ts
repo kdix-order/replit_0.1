@@ -1,15 +1,6 @@
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-// ES Modules環境での__dirname取得
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// 環境変数を最初に読み込む（ルートディレクトリの.envファイルを探す）
-const envPath = path.resolve(__dirname, '../../.env');
-console.log('Loading .env file from:', envPath);
-dotenv.config({ path: envPath });
+dotenv.config();
 
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";

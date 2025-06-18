@@ -32,12 +32,6 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 let payPayInstance: any = null;
 let isInitialized = false;
 
-// モジュールロード時に初期化を試みる
-setTimeout(() => {
-  console.log('=== PayPay自動初期化を開始 ===');
-  initializePayPay();
-}, 0);
-
 /**
  * PayPay SDKを初期化する関数
  * 
