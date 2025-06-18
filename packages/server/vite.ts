@@ -20,7 +20,8 @@ export function log(message: string, source = "express") {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "../../dist/public");
+  // /packages/server/dist/index.jsからの相対パスなので
+  const distPath = path.resolve(__dirname, "../../../dist/public");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
