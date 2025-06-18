@@ -19,7 +19,7 @@ import {
   products,
   storeSettings,
   timeSlots,
-} from "../../shared/schema";
+} from "@shared/schema";
 import { IStorage } from "./istorage";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { and, eq } from "drizzle-orm";

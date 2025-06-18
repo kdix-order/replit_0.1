@@ -1,6 +1,10 @@
 import { PgStorage } from './pg-storage';
 import { MemStorage } from './mem-storage';
 import { drizzle } from "drizzle-orm/node-postgres";
+// TODO: 遅延初期化
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const DATABASE_URL = process.env.DATABASE_URL;
 console.log('Direct DATABASE_URL check:', DATABASE_URL ? 'exists' : 'undefined');

@@ -6,7 +6,7 @@ import type {
   Product, StoreSetting, TimeSlot,
   TimeSlotWithAvailability,
   User
-} from "../../shared/schema";
+} from "@shared/schema";
 import { IStorage } from "./istorage";
 import { randomUUID } from "crypto";
 
