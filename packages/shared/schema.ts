@@ -114,7 +114,8 @@ export type TimeSlot = typeof timeSlots.$inferSelect;
 export type InsertTimeSlot = z.infer<typeof insertTimeSlotSchema>;
 
 export type Order = typeof orders.$inferSelect;
-export type InsertOrder = z.infer<typeof insertOrderSchema>;
+// itemsがnull許容されているため、型定義を調整
+export type InsertOrder = z.infer<typeof insertOrderSchema> & { items: any };
 
 // Additional types for API responses
 export type CartItemWithProduct = CartItem & {
