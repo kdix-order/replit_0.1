@@ -7,7 +7,7 @@
 
 import { adminRepository } from "../../repositories/adminRepository";
 import { Order } from "../../models";
-import { StoreSettings, FeedbackWithDetails } from "../../models/admin";
+import { StoreSettings } from "../../models/admin";
 
 /**
  * 管理者サービスクラス
@@ -68,22 +68,6 @@ export class AdminService {
     }
     
     return adminRepository.updateStoreSettings(acceptingOrders);
-  }
-
-  /**
-   * 全てのフィードバックを詳細情報付きで取得します
-   * @returns 詳細情報付きフィードバックリスト
-   */
-  async getAllFeedbackWithDetails(): Promise<FeedbackWithDetails[]> {
-    const allFeedback = await adminRepository.getAllFeedback();
-    
-    const enrichedFeedback = await Promise.all(
-      allFeedback.map(async (feedback) => {
-        return adminRepository.enrichFeedbackWithDetails(feedback);
-      })
-    );
-    
-    return enrichedFeedback;
   }
 }
 

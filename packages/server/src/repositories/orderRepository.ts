@@ -5,8 +5,8 @@
  * IStorageインターフェースをラップして、注文ドメイン特化のメソッドを提供します。
  */
 
-import { storage } from "../../storage";
-import type { IStorage } from "../../storage/istorage";
+import { storage } from "@/storage";
+import type { IStorage } from "@/storage/istorage";
 import { 
   InsertOrder, 
   Order, 

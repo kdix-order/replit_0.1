@@ -12,7 +12,7 @@ import {
   OrderWithTimeSlot,
   CartItemWithProduct
 } from "../../../shared/schema";
-import { transformCallNumber } from "../../../../server/utils/callNumber";
+import { transformCallNumber } from "@/utils/callNumber";
 
 /**
  * 注文サービスクラス

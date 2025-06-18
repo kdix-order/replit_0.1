@@ -11,13 +11,15 @@ import {
   InsertUser,
   Product,
   Order,
+  OrderWithTimeSlot,
   CartItem,
   CartItemWithProduct,
   InsertCartItem,
   Feedback,
   StoreSetting,
   TimeSlot,
-  AuthResponse as SharedAuthResponse
+  AuthResponse as SharedAuthResponse,
+  InsertOrder
 } from "../../../shared/schema";
 
 export interface AuthResponse extends SharedAuthResponse {}
@@ -32,7 +34,9 @@ export type {
   InsertCartItem,
   Feedback,
   StoreSetting,
-  TimeSlot
+  TimeSlot,
+  OrderWithTimeSlot,
+  InsertOrder
 };
 
 import { z } from "zod";

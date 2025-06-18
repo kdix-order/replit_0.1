@@ -5,9 +5,9 @@
  * IStorageインターフェースをラップして、商品ドメイン特化のメソッドを提供します。
  */
 
-import type { IStorage } from "../../storage/istorage";
+import type { IStorage } from "@/storage/istorage";
 import { Product } from "../models";
-import { storage } from "../../storage/index";
+import { storage } from "@/storage/index";
 
 /**
  * 商品リポジトリクラス

@@ -3,9 +3,9 @@
  ***********************************/
 
 import express from "express";
-import { isAuthenticated } from "../middlewares/auth";
-import { createPayment, getPaymentDetails } from "../paypay";
-import { storage } from "../storage";
+import { isAuthenticated } from "../src/middlewares/auth";
+import { createPayment, getPaymentDetails } from "../src/paypay";
+import { storage } from "@/storage";
 
 const router = express.Router();
 

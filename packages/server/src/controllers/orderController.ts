@@ -5,18 +5,10 @@
  * サービス層を利用してビジネスロジックを実行し、HTTPレスポンスを返します。
  */
 
-import { Request, Response } from "express";
+import { Response } from "express";
 import { orderService } from "../services/orderService";
 import { orderRepository } from "../repositories/orderRepository";
-
-interface AuthenticatedRequest extends Request {
-  user: {
-    id: string;
-    username?: string;
-    email?: string;
-    isAdmin?: boolean;
-  };
-}
+import { AuthenticatedRequest } from "@/middlewares/auth";
 
 /**
  * 注文コントローラークラス
@@ -42,7 +34,7 @@ export class OrderController {
         return;
       }
       
-      const order = await orderService.createOrder(req.user!.id, timeSlotId, paymentMethod);
+      const order = await orderService.createOrder(req.user!.id, timeSlotId);
       
       const timeSlot = await orderRepository.getTimeSlot(order.timeSlotId);
       

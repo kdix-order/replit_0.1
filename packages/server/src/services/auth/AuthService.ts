@@ -5,7 +5,7 @@
  * リポジトリ層を利用してデータアクセスを行い、認証ロジックを適用します。
  */
 
-import { storage } from "../../../storage";
+import { storage } from "@/storage";
 import { User, InsertUser, AuthResponse } from "../../models";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";

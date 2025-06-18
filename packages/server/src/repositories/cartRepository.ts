@@ -5,13 +5,13 @@
  * IStorageインターフェースをラップして、カートドメイン特化のメソッドを提供します。
  */
 
-import type { IStorage } from "../../storage/istorage";
+import type { IStorage } from "@/storage/istorage";
 import { 
   CartItem,
   CartItemWithProduct,
   InsertCartItem
 } from "../models";
-import { storage } from "../../storage/index";
+import { storage } from "@/storage/index";
 
 /**
  * カートリポジトリクラス

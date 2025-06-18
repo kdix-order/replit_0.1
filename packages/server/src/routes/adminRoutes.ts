@@ -25,6 +25,4 @@ router.get("/admin-store-settings", authMiddleware, adminMiddleware, adminContro
 
 router.patch("/admin-store-settings", authMiddleware, adminMiddleware, adminController.updateStoreSettings);
 
-router.get("/feedback", authMiddleware, adminMiddleware, adminController.getAllFeedback);
-
 export default router;

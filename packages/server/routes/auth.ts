@@ -4,9 +4,9 @@
 
 import express from "express";
 import passport from "passport";
-import { generateToken } from "../utils/auth";
-import { storage } from "../storage";
-import { isAuthenticated } from "../middlewares/auth";
+import { generateToken } from "@/utils/auth";
+import { storage } from "@/storage";
+import { isAuthenticated } from "../src/middlewares/auth";
 
 const router = express.Router();
 

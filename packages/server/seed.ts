@@ -1,5 +1,5 @@
 import type { InsertProduct } from "../shared/schema";
-import { storage } from "./storage/index";
+import { storage } from "@/storage/index";
 
 (async () => {
 

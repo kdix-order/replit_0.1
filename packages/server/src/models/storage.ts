@@ -5,7 +5,7 @@
  * IStorageインターフェースを実装したストレージインスタンスの型を提供します。
  */
 
-import type { IStorage } from "../../storage/istorage";
+import type { IStorage } from "@/storage/istorage";
 
 export type StorageInstance = IStorage;
 

@@ -8,7 +8,6 @@
 import { Request, Response } from "express";
 import { adminService } from "../../services/admin/AdminService";
 import { asyncHandler } from "../../middlewares/error";
-import { AuthenticatedRequest } from "../../middlewares/auth";
 
 /**
  * 管理者コントローラークラス
@@ -107,19 +106,6 @@ export class AdminController {
           error: error instanceof Error ? error.message : "Unknown error"
         });
       }
-    }
-  });
-
-  /**
-   * 全てのフィードバックを取得します
-   */
-  getAllFeedback = asyncHandler(async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
-    try {
-      const enrichedFeedback = await adminService.getAllFeedbackWithDetails();
-      res.json(enrichedFeedback);
-    } catch (error) {
-      console.error('フィードバック取得エラー:', error);
-      res.status(500).json({ message: "サーバーエラー" });
     }
   });
 }

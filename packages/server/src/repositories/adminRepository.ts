@@ -5,10 +5,10 @@
  * IStorageインターフェースをラップして、管理者ドメイン特化のメソッドを提供します。
  */
 
-import type { IStorage } from "../../storage/istorage";
-import { Order, Feedback } from "../models";
-import { StoreSettings, FeedbackWithDetails } from "../models/admin";
-import { storage } from "../../storage";
+import type { IStorage } from "@/storage/istorage";
+import { Order } from "../models";
+import { StoreSettings } from "../models/admin";
+import { storage } from "@/storage";
 
 /**
  * 管理者リポジトリクラス
@@ -63,48 +63,6 @@ export class AdminRepository {
    */
   async updateStoreSettings(acceptingOrders: boolean): Promise<StoreSettings> {
     return this.storage.updateStoreSettings(acceptingOrders);
-  }
-
-  /**
-   * 全てのフィードバックを取得します
-   * @returns フィードバックリスト
-   */
-  async getAllFeedback(): Promise<Feedback[]> {
-    return this.storage.getAllFeedback();
-  }
-
-  /**
-   * フィードバックに詳細情報を付加します
-   * @param feedback フィードバックデータ
-   * @returns 詳細情報付きフィードバックデータ
-   */
-  async enrichFeedbackWithDetails(feedback: Feedback): Promise<FeedbackWithDetails> {
-    let orderDetails = null;
-    let userName = 'Unknown user';
-
-    if (feedback.orderId) {
-      const order = await this.storage.getOrder(feedback.orderId);
-      if (order) {
-        orderDetails = {
-          id: order.id,
-          callNumber: order.callNumber,
-          status: order.status,
-          total: order.total,
-          createdAt: order.createdAt ? order.createdAt.toString() : ''
-        };
-      }
-    }
-
-    const user = await this.storage.getUser(feedback.userId);
-    if (user) {
-      userName = user.username || user.email;
-    }
-
-    return {
-      ...feedback,
-      orderDetails,
-      userName
-    };
   }
 }
 
