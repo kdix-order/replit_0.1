@@ -1,8 +1,0 @@
-
-> @ajiten-yakiman/server@1.0.0 build
-> esbuild index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
-
-
-  dist/index.js  48.0kb
-
-⚡ Done in 3ms
