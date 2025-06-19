@@ -5,9 +5,10 @@
  * Canvas APIを使用してレシート画像（JPEG形式）を生成します。
  */
 
-import { createCanvas } from 'canvas';
+import { createCanvas, registerFont } from 'canvas';
 import type { CanvasRenderingContext2D } from 'canvas';
 import { OrderWithTimeSlot } from '../../../shared/schema';
+import path from 'path';
 
 /**
  * レシート画像の設定
@@ -17,13 +18,13 @@ const RECEIPT_CONFIG = {
   maxHeight: 1024,
   maxFileSize: 63 * 1024, // 63KB
   padding: 20,
-  lineHeight: 24,
+  lineHeight: 26,
   backgroundColor: '#ffffff',
   textColor: '#000000',
-  headerFontSize: 36,
-  titleFontSize: 24,
-  bodyFontSize: 18,
-  smallFontSize: 14,
+  headerFontSize: 38,
+  titleFontSize: 26,
+  bodyFontSize: 20,
+  smallFontSize: 16,
 };
 
 /**
@@ -50,6 +51,11 @@ export class ReceiptService {
    */
   async generateReceiptImage(order: OrderWithTimeSlot): Promise<Buffer> {
     try {
+      if (process.env.NODE_ENV !== 'production') { 
+        registerFont(path.join(process.cwd(), "../../public/assets/fonts/MPLUS1p-Regular.ttf"), { family: "M PLUS 1p" });  // font.ttfを登録する。フォント名は適当
+      } else {
+        registerFont(path.join(process.cwd(), "public/assets/fonts/MPLUS1p-Regular.ttf"), { family: "M PLUS 1p" });  // font.ttfを登録する。フォント名は適当
+      }
       // キャンバスの初期サイズを設定
       const canvas = createCanvas(RECEIPT_CONFIG.maxWidth, RECEIPT_CONFIG.maxHeight);
       const ctx = canvas.getContext('2d');
@@ -118,18 +124,18 @@ export class ReceiptService {
    * 呼び出し番号を描画
    */
   private drawCallNumber(ctx: CanvasRenderingContext2D, callNumber: number, startY: number): number {
-    ctx.font = `bold ${RECEIPT_CONFIG.headerFontSize}px Arial`;
+    ctx.font = `bold ${RECEIPT_CONFIG.headerFontSize}px 'M PLUS 1p'`;
     ctx.fillText('お呼び出し番号', RECEIPT_CONFIG.maxWidth / 2, startY + RECEIPT_CONFIG.headerFontSize);
     
     // 番号を大きく赤色で表示
     ctx.fillStyle = '#e80113';
-    ctx.font = `bold 48px Arial`;
-    ctx.fillText(callNumber.toString(), RECEIPT_CONFIG.maxWidth / 2, startY + RECEIPT_CONFIG.headerFontSize + 60);
+    ctx.font = `bold 64px 'M PLUS 1p'`;
+    ctx.fillText(callNumber.toString(), RECEIPT_CONFIG.maxWidth / 2, startY + RECEIPT_CONFIG.headerFontSize + 76);
     
     // 色を元に戻す
     ctx.fillStyle = RECEIPT_CONFIG.textColor;
     
-    return startY + RECEIPT_CONFIG.headerFontSize + 80;
+    return startY + RECEIPT_CONFIG.headerFontSize + 96;
   }
   
   /**
@@ -151,14 +157,14 @@ export class ReceiptService {
    * 注文アイテムを描画
    */
   private drawOrderItems(ctx: CanvasRenderingContext2D, items: OrderItem[], startY: number): number {
-    ctx.font = `bold ${RECEIPT_CONFIG.titleFontSize}px Arial`;
+    ctx.font = `bold ${RECEIPT_CONFIG.titleFontSize}px 'M PLUS 1p'`;
     ctx.fillText('ご注文内容', RECEIPT_CONFIG.maxWidth / 2, startY + RECEIPT_CONFIG.titleFontSize);
     
     let currentY = startY + RECEIPT_CONFIG.titleFontSize + 30;
     
     items.forEach((item) => {
       // 商品名と数量
-      ctx.font = `bold ${RECEIPT_CONFIG.bodyFontSize}px Arial`;
+      ctx.font = `bold ${RECEIPT_CONFIG.bodyFontSize}px 'M PLUS 1p'`;
       ctx.textAlign = 'left';
       const itemText = `${item.name} × ${item.quantity}`;
       ctx.fillText(itemText, RECEIPT_CONFIG.padding, currentY);
@@ -172,7 +178,7 @@ export class ReceiptService {
       
       // サイズ情報
       if (item.size && item.size !== '並') {
-        ctx.font = `${RECEIPT_CONFIG.smallFontSize}px Arial`;
+        ctx.font = `${RECEIPT_CONFIG.smallFontSize}px 'M PLUS 1p'`;
         ctx.textAlign = 'left';
         ctx.fillText(`  サイズ: ${item.size}`, RECEIPT_CONFIG.padding, currentY);
         currentY += RECEIPT_CONFIG.lineHeight;
@@ -180,7 +186,7 @@ export class ReceiptService {
       
       // カスタマイズ情報
       if (item.customizations && item.customizations.length > 0) {
-        ctx.font = `${RECEIPT_CONFIG.smallFontSize}px Arial`;
+        ctx.font = `${RECEIPT_CONFIG.smallFontSize}px 'M PLUS 1p'`;
         ctx.textAlign = 'left';
         item.customizations.forEach((customization) => {
           ctx.fillText(`  ${customization}`, RECEIPT_CONFIG.padding, currentY);
@@ -199,7 +205,7 @@ export class ReceiptService {
    * 合計金額を描画
    */
   private drawTotal(ctx: CanvasRenderingContext2D, total: number, startY: number): number {
-    ctx.font = `bold ${RECEIPT_CONFIG.titleFontSize}px Arial`;
+    ctx.font = `bold ${RECEIPT_CONFIG.titleFontSize}px 'M PLUS 1p'`;
     ctx.textAlign = 'right';
     ctx.fillText(`合計: ¥${total.toLocaleString()}`, RECEIPT_CONFIG.maxWidth - RECEIPT_CONFIG.padding, startY + RECEIPT_CONFIG.titleFontSize);
     
@@ -211,7 +217,7 @@ export class ReceiptService {
    * 受け取り時間を描画
    */
   private drawPickupTime(ctx: CanvasRenderingContext2D, pickupTime: string, startY: number): number {
-    ctx.font = `${RECEIPT_CONFIG.bodyFontSize}px Arial`;
+    ctx.font = `${RECEIPT_CONFIG.bodyFontSize}px 'M PLUS 1p'`;
     ctx.fillText(`受け取り時間: ${pickupTime}`, RECEIPT_CONFIG.maxWidth / 2, startY + RECEIPT_CONFIG.bodyFontSize);
     
     return startY + RECEIPT_CONFIG.bodyFontSize + 20;

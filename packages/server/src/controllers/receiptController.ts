@@ -47,7 +47,7 @@ export class ReceiptController {
       // HTTPヘッダーを設定
       res.setHeader('Content-Type', 'image/jpeg');
       res.setHeader('Content-Length', imageBuffer.length);
-      res.setHeader('Content-Disposition', `attachment; filename="receipt-${order.callNumber}.jpg"`);
+      //res.setHeader('Content-Disposition', `attachment; filename="receipt-${order.callNumber}.jpg"`);
       res.setHeader('Cache-Control', 'public, max-age=3600'); // 1時間キャッシュ
 
       // 画像データを送信
