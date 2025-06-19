@@ -25,4 +25,6 @@ router.get("/admin-store-settings", authMiddleware, adminMiddleware, adminContro
 
 router.patch("/admin-store-settings", authMiddleware, adminMiddleware, adminController.updateStoreSettings);
 
+router.post("/receipts/:orderId", authMiddleware, adminMiddleware, adminController.printReceipt);
+
 export default router;

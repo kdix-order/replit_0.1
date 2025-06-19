@@ -83,7 +83,7 @@ export class PaymentService {
    * @param order 注文データ
    * @throws レシート印刷に失敗した場合
    */
-  private async printReceipt(order: Order): Promise<void> {
+  async printReceipt(order: Order): Promise<void> {
     const contractId = process.env.SMAREGI_CONTRACT_ID;
     const storeId = process.env.SMAREGI_STORE_ID;
     const terminalId = process.env.SMAREGI_TERMINAL_ID;

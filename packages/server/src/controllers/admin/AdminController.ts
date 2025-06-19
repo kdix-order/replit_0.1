@@ -8,6 +8,8 @@
 import { Request, Response } from "express";
 import { adminService } from "../../services/admin/AdminService";
 import { asyncHandler } from "../../middlewares/error";
+import { paymentService } from "@/services/paymentService";
+import { storage } from "@/storage";
 
 /**
  * 管理者コントローラークラス
@@ -93,7 +95,7 @@ export class AdminController {
   updateStoreSettings = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
       const { acceptingOrders } = req.body;
-      
+
       const settings = await adminService.updateStoreSettings(acceptingOrders);
       res.json(settings);
     } catch (error) {
@@ -106,6 +108,35 @@ export class AdminController {
           error: error instanceof Error ? error.message : "Unknown error"
         });
       }
+    }
+  });
+
+  printReceipt = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { orderId } = req.params;
+
+      if (!orderId) {
+        res.status(400).json({ message: "注文IDが必要です" });
+        return;
+      }
+
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        res.status(404).json({ message: "注文が見つかりません" });
+        return;
+      }
+
+      await paymentService.printReceipt(order);
+      res.json({
+        message: "レシートの印刷が完了しました",
+        orderId: order.id
+      });
+    } catch (error) {
+      console.error("レシート印刷中にエラーが発生しました:", error);
+      res.status(500).json({
+        message: "レシート印刷中にエラーが発生しました",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 }
