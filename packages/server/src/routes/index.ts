@@ -13,6 +13,7 @@ import cartRoutes from "./cartRoutes";
 import authRoutes from "./authRoutes";
 import adminRoutes from "./adminRoutes";
 import receiptRoutes from "./receiptRoutes";
+import timeslotRoutes from "./timeslotRoutes";
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.use("/orders", orderRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/products", productRoutes);
 router.use("/receipts", receiptRoutes);
+router.use("/timeslots", timeslotRoutes);
 
 router.post("/idp", (req, res) => {
     console.log("IDP request received:", JSON.stringify(req.body, null, 2));
