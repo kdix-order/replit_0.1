@@ -101,7 +101,7 @@ export class SmaregiService {
     const clientSecret = process.env.SMAREGI_CLIENT_SECRET;
     const contractId = process.env.SMAREGI_CONTRACT_ID;
     const devMode = process.env.SMAREGI_DEV_MODE === 'true'; // 開発モードかどうか
-    const scope = process.env.SMAREGI_SCOPE || 'pos.terminals:print'; // デフォルトでレシート印刷スコープ
+    const scope = process.env.SMAREGI_SCOPE || 'pos.stores:read pos.terminals:print'; // デフォルトでレシート印刷スコープ
 
     if (!clientId || !clientSecret || !contractId) {
       throw new Error('SMAREGI_CLIENT_ID, SMAREGI_CLIENT_SECRET, and SMAREGI_CONTRACT_ID must be set in environment variables');
