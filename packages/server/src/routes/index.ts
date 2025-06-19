@@ -24,4 +24,9 @@ router.use("/payments", paymentRoutes);
 router.use("/products", productRoutes);
 router.use("/receipts", receiptRoutes);
 
+router.post("/idp", (req, res) => {
+    console.log("IDP request received:", JSON.stringify(req.body, null, 2));
+    res.sendStatus(200);
+});
+
 export default router;
